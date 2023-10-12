@@ -6,10 +6,10 @@ const TopPage = () => {
   return (
     <div>
       <h1>TopPage</h1>
-      <button className="toQr" onClick={() => navigate("/to-qr")}>
+      <button className="primary" onClick={() => navigate("/to-qr")}>
         to-qr
       </button>
-      <button className="toImage" onClick={() => navigate("/to-image")}>
+      <button className="secondary" onClick={() => navigate("/to-image")}>
         to-image
       </button>
     </div>
