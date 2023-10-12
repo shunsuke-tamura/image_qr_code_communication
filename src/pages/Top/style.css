@@ -1,0 +1,15 @@
+button {
+  margin: 15px;
+}
+
+/* primary color button */
+.toQr {
+  background-color: #646cff;
+  color: #ffffff;
+}
+
+/* secondary color button */
+.toImage {
+  background-color: #ffffff;
+  color: #646cff;
+}
