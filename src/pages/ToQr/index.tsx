@@ -10,14 +10,14 @@ const ToQrPage = () => {
     }
   };
 
-  const convertImageToBase64 = (file: File): Promise<string> => {
+  const convertImageToString = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
+      reader.readAsBinaryString(file);
       reader.onload = () => {
-        const base64String = reader.result?.toString();
-        if (base64String) {
-          resolve(base64String);
+        const imageString = reader.result?.toString();
+        if (imageString) {
+          resolve(imageString);
         } else {
           reject(new Error("Failed to convert image to base64"));
         }
@@ -26,9 +26,9 @@ const ToQrPage = () => {
     });
   };
 
-  const convertBase64ToQrCode = (base64String: string): Promise<string> => {
+  const convertStringToQrCode = (imageString: string): Promise<string> => {
     // TODO: Implement QR code generation logic
-    console.log(base64String);
+    console.log(imageString);
     return Promise.resolve("QR code string");
   };
 
@@ -37,8 +37,8 @@ const ToQrPage = () => {
   const handleShowQrCode = async () => {
     if (imageFile) {
       try {
-        const base64String = await convertImageToBase64(imageFile);
-        const qrCodeString = await convertBase64ToQrCode(base64String);
+        const imageString = await convertImageToString(imageFile);
+        const qrCodeString = await convertStringToQrCode(imageString);
         setQrCodeString(qrCodeString);
       } catch (error) {
         console.error(error);
