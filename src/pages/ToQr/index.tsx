@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import QRcode from "qrcode";
 
 const ToQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -27,19 +29,62 @@ const ToQrPage = () => {
   };
 
   const convertStringToQrCode = (imageString: string): Promise<string> => {
-    // TODO: Implement QR code generation logic
-    console.log(imageString);
-    return Promise.resolve("QR code string");
+    return new Promise((resolve, reject) => {
+      QRcode.toDataURL(
+        imageString,
+        { errorCorrectionLevel: "L", version: 40, mode: "byte" },
+        (err: Error | null, url?: string) => {
+          if (err) {
+            reject(err);
+          } else if (url) {
+            resolve(url);
+          }
+        }
+      );
+    });
   };
 
-  const [qrCodeString, setQrCodeString] = useState<string | null>(null);
+  const qrCodes: string[] = [];
+  const [qrCodeIdx, setQrCodeIdx] = useState<number>(0);
 
   const handleShowQrCode = async () => {
+    const splitString = (str: string, chunkSize: number) => {
+      const chunks = [];
+      for (let i = 0; i < str.length; i += chunkSize) {
+        chunks.push(str.slice(i, i + chunkSize));
+      }
+      return chunks;
+    };
+
     if (imageFile) {
       try {
         const imageString = await convertImageToString(imageFile);
-        const qrCodeString = await convertStringToQrCode(imageString);
-        setQrCodeString(qrCodeString);
+        const qrCodeStringChunks = splitString(imageString, 1957); // 2953 is the max size of a QR code
+        for (let i = 0; i < qrCodeStringChunks.length; i++) {
+          const qrCodeString = await convertStringToQrCode(
+            qrCodeStringChunks[i]
+          );
+          qrCodes.push(qrCodeString);
+        }
+        console.log(qrCodes);
+        const handleQrCode = async () => {
+          // delay to 500ms to prevent the browser from crashing
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const ctx = canvasRef.current?.getContext("2d");
+          if (!ctx) return;
+          ctx.clearRect(0, 0, 500, 500);
+          const qrCode = new Image();
+          qrCode.src = qrCodes[qrCodeIdx];
+          qrCode.onload = () => {
+            ctx.drawImage(qrCode, 0, 0, 500, 500);
+          };
+          setQrCodeIdx((prevQrCodeIdx) => {
+            console.log((prevQrCodeIdx + 1) % qrCodes.length);
+            return (prevQrCodeIdx + 1) % qrCodes.length;
+          });
+          window.requestAnimationFrame(handleQrCode);
+        };
+        window.requestAnimationFrame(handleQrCode);
       } catch (error) {
         console.error(error);
       }
@@ -54,7 +99,7 @@ const ToQrPage = () => {
         Show QR Code
       </button>
       <br />
-      {qrCodeString && <img src={qrCodeString} alt="QR Code" />}
+      <canvas width={500} height={500} ref={canvasRef}></canvas>
     </div>
   );
 };
