@@ -11,6 +11,7 @@ const ToImagePage = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [videoParts, setVideoParts] = useState<string[]>([]);
 
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
@@ -39,6 +40,41 @@ const ToImagePage = () => {
     mediaRecorderRef.current.stop();
     setCapturing(false);
   }, [mediaRecorderRef]);
+
+  // interval[ms]
+  const cutVideo = (interval: number) => {
+    const video = document.createElement("video");
+    const superBuffer = new Blob(recordedChunks, { type: "video/webm" });
+    video.src = URL.createObjectURL(superBuffer);
+    video.currentTime = Number.MAX_SAFE_INTEGER;
+
+    video.onloadeddata = async () => {
+      const duration = video.duration;
+      console.log(duration);
+
+      // video to image
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx === null) return;
+      let currentTime = 0;
+      for (let i = 0; i < 3; i < i++) {
+        if (currentTime >= duration) break;
+        video.currentTime = currentTime;
+        await video.play();
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const image = canvas.toDataURL("image/png");
+        console.log(currentTime);
+
+        setVideoParts((prev) => [...prev, image]);
+        currentTime += interval / 1000;
+      }
+      return video.pause();
+    };
+
+    video.load();
+  };
 
   const { ref } = useZxing({
     paused: !scan,
@@ -88,6 +124,12 @@ const ToImagePage = () => {
           Start
         </button>
       )}
+      <button onClick={() => cutVideo(500)} className="secondary">
+        Cut
+      </button>
+      {videoParts.map((videoPart, idx) => (
+        <img src={videoPart} alt="video part" key={idx} />
+      ))}
       {/* </div> */}
       {/* <div style={{ zIndex: 1 }}> */}
       <div>
