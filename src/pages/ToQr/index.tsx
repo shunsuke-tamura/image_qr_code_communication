@@ -1,9 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import QRcode from "qrcode";
 
 const ToQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrCodes, setQrCodes] = useState<string[]>([]);
+  const [showingQrCodeIndex, setShowingQrCodeIndex] = useState(0);
+  const [qrCodeHandler, setQrCodeHandler] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,9 +48,28 @@ const ToQrPage = () => {
     });
   };
 
-  // const qrCodes: string[] = [];
-  // const [qrCodeIdx, setQrCodeIdx] = useState<number>(0);
-  const [qrCodes, setQrCodes] = useState<string[]>([]);
+  useEffect(() => {
+    return () => {
+      if (qrCodeHandler) {
+        console.log("clearing interval");
+        clearInterval(qrCodeHandler);
+      }
+    };
+  }, [qrCodeHandler]);
+
+  const startShowingQrCode = (qrCodeNum: number) => {
+    const qrHandler = (listLength: number) =>
+      setInterval(() => {
+        setShowingQrCodeIndex((prev) => {
+          const next = (prev + 1) % listLength;
+          console.log("showing qr code: ", next);
+          return next;
+        });
+      }, 1000);
+
+    const handler = qrHandler(qrCodeNum);
+    setQrCodeHandler(handler);
+  };
 
   const handleShowQrCode = async () => {
     const splitString = (str: string, chunkSize: number) => {
@@ -62,32 +85,16 @@ const ToQrPage = () => {
         const imageString = await convertImageToString(imageFile);
         // const qrCodeStringChunks = splitString(imageString, 1987); // 2953 is the max size of a QR code
         const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
+        const temp: string[] = [];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
             qrCodeStringChunks[i]
           );
-          // qrCodes.push(qrCodeString);
-          setQrCodes((prevQrCodes) => [...prevQrCodes, qrCodeString]);
+          temp.push(qrCodeString);
         }
-        console.log(qrCodes);
-        // const handleQrCode = async () => {
-        //   // delay to 500ms to prevent the browser from crashing
-        //   await new Promise((resolve) => setTimeout(resolve, 1000));
-        //   const ctx = canvasRef.current?.getContext("2d");
-        //   if (!ctx) return;
-        //   ctx.clearRect(0, 0, 500, 500);
-        //   const qrCode = new Image();
-        //   qrCode.src = qrCodes[qrCodeIdx];
-        //   qrCode.onload = () => {
-        //     ctx.drawImage(qrCode, 0, 0, 500, 500);
-        //   };
-        //   setQrCodeIdx((prevQrCodeIdx) => {
-        //     console.log((prevQrCodeIdx + 1) % qrCodes.length);
-        //     return (prevQrCodeIdx + 1) % qrCodes.length;
-        //   });
-        //   window.requestAnimationFrame(handleQrCode);
-        // };
-        // window.requestAnimationFrame(handleQrCode);
+        console.log(temp.length);
+        setQrCodes(temp);
+        startShowingQrCode(temp.length);
       } catch (error) {
         console.error(error);
       }
@@ -102,19 +109,9 @@ const ToQrPage = () => {
         Show QR Code
       </button>
       <br />
-      {/* <canvas width={500} height={500} ref={canvasRef}></canvas> */}
-      {qrCodes.map((qrCode, idx) => (
-        <div
-          key={idx}
-          style={{
-            padding: "80px",
-            backgroundColor: "white",
-            margin: "20px 0",
-          }}
-        >
-          <img src={qrCode} alt="qr code" />
-        </div>
-      ))}
+      {qrCodes.length !== 0 ? (
+        <img src={qrCodes[showingQrCodeIndex]} alt="qr code" />
+      ) : null}
     </div>
   );
 };
