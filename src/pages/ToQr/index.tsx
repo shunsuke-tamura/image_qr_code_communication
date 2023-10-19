@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRcode from "qrcode";
 
 const ToQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [qrCodes, setQrCodes] = useState<string[]>([]);
   const [showingQrCodeIndex, setShowingQrCodeIndex] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -32,7 +33,7 @@ const ToQrPage = () => {
     return new Promise((resolve, reject) => {
       QRcode.toDataURL(
         imageString,
-        { errorCorrectionLevel: "L", version: 30, mode: "byte" },
+        { errorCorrectionLevel: "L", version: 20, mode: "byte" },
         (err: Error | null, url?: string) => {
           if (err) {
             reject(err);
@@ -52,7 +53,7 @@ const ToQrPage = () => {
     const qrHandler = (showIndex: number) => {
       console.log(showIndex);
       setShowingQrCodeIndex(showIndex);
-      setTimeout(
+      timerRef.current = setTimeout(
         () => qrHandler((showIndex + 1) % qrCodeNum),
         showIndex === 0 || showIndex === qrCodeNum - 1
           ? longInterval
@@ -61,6 +62,15 @@ const ToQrPage = () => {
     };
     qrHandler(0);
   };
+
+  useEffect(() => {
+    return () => {
+      console.log("stop showing qr code");
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [timerRef]);
 
   const handleShowQrCode = async () => {
     const splitString = (str: string, chunkSize: number) => {
@@ -75,7 +85,8 @@ const ToQrPage = () => {
       try {
         const imageString = await convertImageToString(imageFile);
         // const qrCodeStringChunks = splitString(imageString, 1987); // 2953 is the max size of a QR code
-        const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
+        // const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
+        const qrCodeStringChunks = splitString(imageString, 500); // 2953 is the max size of a QR code
         const temp: string[] = [await convertStringToQrCode("start")];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
