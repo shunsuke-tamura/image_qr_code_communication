@@ -14,6 +14,20 @@ const ToImagePage = () => {
   const [videoParts, setVideoParts] = useState<string[]>([]);
   const controlsRef = useRef<IScannerControls | null>();
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        const cameras = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+        setCameraList(cameras);
+        setSelectedCameraId(cameras[0].deviceId);
+      })
+      .catch((err) => console.log(err.name + ": " + err.message));
+  }, []);
 
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
@@ -162,7 +176,22 @@ const ToImagePage = () => {
 
   return (
     <div>
-      <Webcam audio={false} ref={webcamRef}></Webcam>
+      <Webcam
+        audio={false}
+        ref={webcamRef}
+        videoConstraints={{ deviceId: selectedCameraId }}
+      ></Webcam>
+      <br />
+      <select
+        value={selectedCameraId}
+        onChange={(e) => setSelectedCameraId(e.target.value)}
+      >
+        {cameraList.map((camera) => (
+          <option value={camera.deviceId} key={camera.deviceId}>
+            {camera.label}
+          </option>
+        ))}
+      </select>
       <br />
       {capturing ? (
         <button onClick={handleStopCaptureClick} className="primary">
