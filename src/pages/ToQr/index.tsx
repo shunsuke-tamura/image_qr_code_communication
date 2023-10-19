@@ -1,14 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import QRcode from "qrcode";
 
 const ToQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [qrCodes, setQrCodes] = useState<string[]>([]);
   const [showingQrCodeIndex, setShowingQrCodeIndex] = useState(0);
-  const [qrCodeHandler, setQrCodeHandler] = useState<NodeJS.Timeout | null>(
-    null
-  );
-
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -48,27 +44,22 @@ const ToQrPage = () => {
     });
   };
 
-  useEffect(() => {
-    return () => {
-      if (qrCodeHandler) {
-        console.log("clearing interval");
-        clearInterval(qrCodeHandler);
-      }
-    };
-  }, [qrCodeHandler]);
-
   const startShowingQrCode = (qrCodeNum: number) => {
-    const qrHandler = (listLength: number) =>
-      setInterval(() => {
-        setShowingQrCodeIndex((prev) => {
-          const next = (prev + 1) % listLength;
-          console.log("showing qr code: ", next);
-          return next;
-        });
-      }, 1000);
+    console.log("start showing qr code");
 
-    const handler = qrHandler(qrCodeNum);
-    setQrCodeHandler(handler);
+    const longInterval = 2000;
+    const shortInterval = 1000;
+    const qrHandler = (showIndex: number) => {
+      console.log(showIndex);
+      setShowingQrCodeIndex(showIndex);
+      setTimeout(
+        () => qrHandler((showIndex + 1) % qrCodeNum),
+        showIndex === 0 || showIndex === qrCodeNum - 1
+          ? longInterval
+          : shortInterval
+      );
+    };
+    qrHandler(0);
   };
 
   const handleShowQrCode = async () => {
@@ -88,7 +79,7 @@ const ToQrPage = () => {
         const temp: string[] = [await convertStringToQrCode("start")];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
-            qrCodeStringChunks[i]
+            `${i},${qrCodeStringChunks[i]}`
           );
           temp.push(qrCodeString);
         }
