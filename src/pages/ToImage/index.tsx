@@ -50,8 +50,6 @@ const ToImagePage = () => {
       webcamRef.current.video as HTMLVideoElement,
       (result, _err, controls) => {
         if (result) {
-          console.log(result);
-          // controls.stop();
           if (result.getText() === "start") {
             setCapturing(true);
           }
@@ -134,8 +132,6 @@ const ToImagePage = () => {
 
   return (
     <div>
-      {/* <div className="modal-container"> */}
-      {/* <video ref={ref}></video> */}
       <Webcam audio={false} ref={webcamRef}></Webcam>
       {capturing ? (
         <button onClick={handleStopCaptureClick} className="primary">
@@ -152,8 +148,6 @@ const ToImagePage = () => {
       {videoParts.map((videoPart, idx) => (
         <img src={videoPart} alt="video part" key={idx} />
       ))}
-      {/* </div> */}
-      {/* <div style={{ zIndex: 1 }}> */}
       <div>
         <h1>ToImagePage</h1>
         <button className="primary" onClick={() => setScan(true)}>
