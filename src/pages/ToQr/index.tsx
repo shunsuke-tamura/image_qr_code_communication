@@ -33,7 +33,7 @@ const ToQrPage = () => {
     return new Promise((resolve, reject) => {
       QRcode.toDataURL(
         imageString,
-        { errorCorrectionLevel: "L", version: 20, mode: "byte" },
+        { errorCorrectionLevel: "L", version: 13, mode: "byte" },
         (err: Error | null, url?: string) => {
           if (err) {
             reject(err);
@@ -48,8 +48,8 @@ const ToQrPage = () => {
   const startShowingQrCode = (qrCodeNum: number) => {
     console.log("start showing qr code");
 
-    const longInterval = 2000;
-    const shortInterval = 1000;
+    const longInterval = 1000;
+    const shortInterval = 100;
     const qrHandler = (showIndex: number) => {
       console.log(showIndex);
       setShowingQrCodeIndex(showIndex);
@@ -86,16 +86,16 @@ const ToQrPage = () => {
         const imageString = await convertImageToString(imageFile);
         // const qrCodeStringChunks = splitString(imageString, 1987); // 2953 is the max size of a QR code
         // const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
-        const qrCodeStringChunks = splitString(imageString, 500); // 2953 is the max size of a QR code
+        const qrCodeStringChunks = splitString(imageString, 271); // 2953 is the max size of a QR code
         const temp: string[] = [await convertStringToQrCode("start")];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
-            `${i},${qrCodeStringChunks[i]}`
+            `${("000" + i).slice(-3)},${qrCodeStringChunks[i]}`
           );
           temp.push(qrCodeString);
         }
-        console.log(temp.length);
         temp.push(await convertStringToQrCode("stop"));
+        console.log(temp.length, qrCodeStringChunks.length);
         setQrCodes(temp);
         startShowingQrCode(temp.length);
       } catch (error) {
@@ -113,7 +113,9 @@ const ToQrPage = () => {
       </button>
       <br />
       {qrCodes.length !== 0 ? (
-        <img src={qrCodes[showingQrCodeIndex]} alt="qr code" />
+        <div style={{ backgroundColor: "white", padding: "70px" }}>
+          <img src={qrCodes[showingQrCodeIndex]} alt="qr code" />
+        </div>
       ) : null}
     </div>
   );
