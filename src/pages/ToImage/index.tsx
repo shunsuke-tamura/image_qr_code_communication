@@ -14,28 +14,6 @@ const ToImagePage = () => {
   const [videoParts, setVideoParts] = useState<string[]>([]);
   const controlsRef = useRef<IScannerControls | null>();
 
-  useEffect(() => {
-    if (webcamRef.current === null) return;
-    const codeReader = new BrowserQRCodeReader();
-    codeReader.decodeFromVideoDevice(
-      undefined,
-      webcamRef.current.video as HTMLVideoElement,
-      (result, _err, controls) => {
-        if (result) {
-          console.log(result);
-          controls.stop();
-        }
-        controlsRef.current = controls;
-      }
-    );
-    return () => {
-      if (controlsRef.current) {
-        controlsRef.current.stop();
-        controlsRef.current = null;
-      }
-    };
-  }, []);
-
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
       if (data.size > 0) {
@@ -63,6 +41,35 @@ const ToImagePage = () => {
     mediaRecorderRef.current.stop();
     setCapturing(false);
   }, [mediaRecorderRef]);
+
+  useEffect(() => {
+    if (webcamRef.current === null) return;
+    const codeReader = new BrowserQRCodeReader();
+    codeReader.decodeFromVideoDevice(
+      undefined,
+      webcamRef.current.video as HTMLVideoElement,
+      (result, _err, controls) => {
+        if (result) {
+          console.log(result);
+          // controls.stop();
+          if (result.getText() === "start") {
+            setCapturing(true);
+          }
+          if (result.getText() === "stop") {
+            setCapturing(false);
+            handleStopCaptureClick();
+          }
+        }
+        controlsRef.current = controls;
+      }
+    );
+    return () => {
+      if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
+      }
+    };
+  }, [handleStopCaptureClick]);
 
   // interval[ms]
   const cutVideo = (interval: number) => {

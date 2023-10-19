@@ -85,7 +85,7 @@ const ToQrPage = () => {
         const imageString = await convertImageToString(imageFile);
         // const qrCodeStringChunks = splitString(imageString, 1987); // 2953 is the max size of a QR code
         const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
-        const temp: string[] = [];
+        const temp: string[] = [await convertStringToQrCode("start")];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
             qrCodeStringChunks[i]
@@ -93,6 +93,7 @@ const ToQrPage = () => {
           temp.push(qrCodeString);
         }
         console.log(temp.length);
+        temp.push(await convertStringToQrCode("stop"));
         setQrCodes(temp);
         startShowingQrCode(temp.length);
       } catch (error) {
