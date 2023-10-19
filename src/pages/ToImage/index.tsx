@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "react";
-import { useZxing } from "react-zxing";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./style.css";
 import Webcam from "react-webcam";
+import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 
 const ToImagePage = () => {
   const [scan, setScan] = useState(true);
@@ -12,6 +12,29 @@ const ToImagePage = () => {
   const [capturing, setCapturing] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [videoParts, setVideoParts] = useState<string[]>([]);
+  const controlsRef = useRef<IScannerControls | null>();
+
+  useEffect(() => {
+    if (webcamRef.current === null) return;
+    const codeReader = new BrowserQRCodeReader();
+    codeReader.decodeFromVideoDevice(
+      undefined,
+      webcamRef.current.video as HTMLVideoElement,
+      (result, _err, controls) => {
+        if (result) {
+          console.log(result);
+          controls.stop();
+        }
+        controlsRef.current = controls;
+      }
+    );
+    return () => {
+      if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
+      }
+    };
+  }, []);
 
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
@@ -75,14 +98,6 @@ const ToImagePage = () => {
 
     video.load();
   };
-
-  const { ref } = useZxing({
-    paused: !scan,
-    onDecodeResult(result) {
-      setScan(false);
-      setQrCodeDatas((prev) => [...prev, result.getText()]);
-    },
-  });
 
   const combineQrCodeDatas = () => {
     const binaryString = qrCodeDatas.join("");
