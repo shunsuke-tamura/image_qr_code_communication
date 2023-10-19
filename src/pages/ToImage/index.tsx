@@ -2,16 +2,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./style.css";
 import Webcam from "react-webcam";
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import jsQR from "jsqr";
+
+type PartData = {
+  data: ImageData;
+  dataStr: string; // base64
+};
 
 const ToImagePage = () => {
   const [scan, setScan] = useState(true);
   const [image, setImage] = useState("");
-  const [qrCodeDatas, setQrCodeDatas] = useState<string[]>([]);
   const webcamRef = useRef<Webcam>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
-  const [videoParts, setVideoParts] = useState<string[]>([]);
+  const [videoParts, setVideoParts] = useState<PartData[]>([]);
   const controlsRef = useRef<IScannerControls | null>();
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
@@ -112,12 +117,16 @@ const ToImagePage = () => {
         let currentTime = 0;
         for (;;) {
           if (currentTime >= duration) break;
+          currentTime += interval / 1000;
           video.currentTime = currentTime;
           await video.play();
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const image = canvas.toDataURL("image/png");
-          setVideoParts((prev) => [...prev, image]);
-          currentTime += interval / 1000;
+          const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const imageStr = canvas.toDataURL("image/png");
+          setVideoParts((prev) => [
+            ...prev,
+            { data: image, dataStr: imageStr },
+          ]);
         }
         return video.pause();
       };
@@ -128,23 +137,33 @@ const ToImagePage = () => {
     }
   };
 
-  const decodeQrCode = (imageDataUrl: string) => {
-    const codeReader = new BrowserQRCodeReader();
-    codeReader.decodeFromImageUrl(imageDataUrl).then((result) => {
-      if (result) {
-        setQrCodeDatas((prev) => [...prev, result.getText()]);
-      }
-    });
+  const decodeQrCode = (partData: PartData, idx: number) => {
+    const code = jsQR(
+      partData.data.data,
+      partData.data.width,
+      partData.data.height
+    );
+    if (code) {
+      return code.data;
+    } else {
+      console.log(idx, "not found");
+    }
   };
 
-  const combineQrCodeDatas = () => {
+  const combineQrCodeDatas = (qrCodeDatas: string[]) => {
     const imageDatas: string[] = [];
     qrCodeDatas.forEach((qrCodeData) => {
-      const qrCodeDataSplit = qrCodeData.split(",");
-      const index = Number(qrCodeDataSplit[0]);
-      const data = qrCodeDataSplit[1];
-      imageDatas[index] = data;
-      console.log(index);
+      const prefix = Number(qrCodeData.substring(0, 3));
+      const data = qrCodeData.substring(4);
+      if (!Number.isNaN(prefix)) {
+        if (imageDatas.length <= prefix) {
+          imageDatas.push(data);
+        } else {
+          imageDatas[prefix] = data;
+        }
+      } else {
+        console.log("NaN: ", qrCodeData);
+      }
     });
     const binaryString = imageDatas.join("");
     return binaryString;
@@ -164,15 +183,25 @@ const ToImagePage = () => {
     return url;
   };
 
-  const handleConvertToImage = () => {
-    cutVideo(500);
-    console.log(videoParts);
-
-    videoParts.forEach((videoPart) => decodeQrCode(videoPart));
-    const binaryString = combineQrCodeDatas();
-    const binary = binaryStringToBinary(binaryString);
-    const imageDataUrl = convertBinaryToImageDataUrl(binary);
-    setImage(imageDataUrl);
+  const handleConvertToImage = async () => {
+    cutVideo(50);
+    // delay 2s
+    // TODO cutをPromise化してawaitできるようにする
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setVideoParts((prev) => {
+      const qrDatas: string[] = [];
+      prev.forEach((videoPart, idx) => {
+        const data = decodeQrCode(videoPart, idx);
+        if (data) {
+          qrDatas.push(data);
+        }
+      });
+      const binaryString = combineQrCodeDatas(qrDatas);
+      const binary = binaryStringToBinary(binaryString);
+      const imageDataUrl = convertBinaryToImageDataUrl(binary);
+      setImage(imageDataUrl);
+      return prev;
+    });
   };
 
   return (
@@ -212,9 +241,13 @@ const ToImagePage = () => {
           Hide
         </button>
       )}
+      <br />
       {showImages &&
         videoParts.map((videoPart, idx) => (
-          <img src={videoPart} alt="video part" key={idx} />
+          <div>
+            {idx} <br />
+            <img src={videoPart.dataStr} alt="video part" key={idx} />
+          </div>
         ))}
       <div>
         <h1>ToImagePage</h1>
