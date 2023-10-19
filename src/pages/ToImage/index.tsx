@@ -15,6 +15,7 @@ const ToImagePage = () => {
   const controlsRef = useRef<IScannerControls | null>();
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
+  const [showImages, setShowImages] = useState<boolean>(false);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -194,20 +195,27 @@ const ToImagePage = () => {
       </select>
       <br />
       {capturing ? (
-        <button onClick={handleStopCaptureClick} className="primary">
+        <button onClick={handleStopCaptureClick} className="secondary">
           Stop
         </button>
       ) : (
-        <button onClick={handleStartCaptureClick} className="secondary">
+        <button onClick={handleStartCaptureClick} className="primary">
           Start
         </button>
       )}
-      <button onClick={() => cutVideo(500)} className="secondary">
-        Cut
-      </button>
-      {videoParts.map((videoPart, idx) => (
-        <img src={videoPart} alt="video part" key={idx} />
-      ))}
+      {!showImages ? (
+        <button onClick={() => setShowImages(true)} className="primary">
+          Show
+        </button>
+      ) : (
+        <button onClick={() => setShowImages(false)} className="secondary">
+          Hide
+        </button>
+      )}
+      {showImages &&
+        videoParts.map((videoPart, idx) => (
+          <img src={videoPart} alt="video part" key={idx} />
+        ))}
       <div>
         <h1>ToImagePage</h1>
         <button className="primary" onClick={() => setScan(true)}>
