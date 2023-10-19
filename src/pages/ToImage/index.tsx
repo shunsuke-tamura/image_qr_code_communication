@@ -13,6 +13,7 @@ const ToImagePage = () => {
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [videoParts, setVideoParts] = useState<string[]>([]);
   const controlsRef = useRef<IScannerControls | null>();
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
@@ -25,15 +26,21 @@ const ToImagePage = () => {
 
   const handleStartCaptureClick = useCallback(() => {
     if (webcamRef.current === null || webcamRef.current.stream === null) return;
-    setCapturing(true);
-    mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-      mimeType: "video/webm",
-    });
-    mediaRecorderRef.current.addEventListener(
-      "dataavailable",
-      handleDataAvailable
-    );
-    mediaRecorderRef.current.start();
+    try {
+      mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
+        mimeType: MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4",
+      });
+      mediaRecorderRef.current.addEventListener(
+        "dataavailable",
+        handleDataAvailable
+      );
+      mediaRecorderRef.current.start();
+      setCapturing(true);
+    } catch (e) {
+      console.log(e);
+    }
   }, [webcamRef, setCapturing, mediaRecorderRef, handleDataAvailable]);
 
   const handleStopCaptureClick = useCallback(() => {
@@ -51,10 +58,9 @@ const ToImagePage = () => {
       (result, _err, controls) => {
         if (result) {
           if (result.getText() === "start") {
-            setCapturing(true);
+            handleStartCaptureClick();
           }
           if (result.getText() === "stop") {
-            setCapturing(false);
             handleStopCaptureClick();
           }
         }
@@ -67,45 +73,65 @@ const ToImagePage = () => {
         controlsRef.current = null;
       }
     };
-  }, [handleStopCaptureClick]);
+  }, [handleStartCaptureClick, handleStopCaptureClick]);
 
   // interval[ms]
   const cutVideo = (interval: number) => {
-    const video = document.createElement("video");
-    const superBuffer = new Blob(recordedChunks, { type: "video/webm" });
-    video.src = URL.createObjectURL(superBuffer);
-    video.currentTime = Number.MAX_SAFE_INTEGER;
+    try {
+      const video = document.createElement("video");
+      const superBuffer = new Blob(recordedChunks, {
+        type: MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4",
+      });
+      video.src = URL.createObjectURL(superBuffer);
+      video.currentTime = Number.MAX_SAFE_INTEGER;
+      video.onloadeddata = async () => {
+        const duration = video.duration;
+        // video to image
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) return;
+        let currentTime = 0;
+        for (;;) {
+          if (currentTime >= duration) break;
+          video.currentTime = currentTime;
+          await video.play();
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const image = canvas.toDataURL("image/png");
+          setVideoParts((prev) => [...prev, image]);
+          currentTime += interval / 1000;
+        }
+        return video.pause();
+      };
 
-    video.onloadeddata = async () => {
-      const duration = video.duration;
-      console.log(duration);
+      video.load();
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
-      // video to image
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx === null) return;
-      let currentTime = 0;
-      for (let i = 0; i < 3; i < i++) {
-        if (currentTime >= duration) break;
-        video.currentTime = currentTime;
-        await video.play();
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const image = canvas.toDataURL("image/png");
-        console.log(currentTime);
-
-        setVideoParts((prev) => [...prev, image]);
-        currentTime += interval / 1000;
+  const decodeQrCode = (imageDataUrl: string) => {
+    const codeReader = new BrowserQRCodeReader();
+    codeReader.decodeFromImageUrl(imageDataUrl).then((result) => {
+      if (result) {
+        setQrCodeDatas((prev) => [...prev, result.getText()]);
       }
-      return video.pause();
-    };
-
-    video.load();
+    });
   };
 
   const combineQrCodeDatas = () => {
-    const binaryString = qrCodeDatas.join("");
+    const imageDatas: string[] = [];
+    qrCodeDatas.forEach((qrCodeData) => {
+      const qrCodeDataSplit = qrCodeData.split(",");
+      const index = Number(qrCodeDataSplit[0]);
+      const data = qrCodeDataSplit[1];
+      imageDatas[index] = data;
+      console.log(index);
+    });
+    const binaryString = imageDatas.join("");
     return binaryString;
   };
 
@@ -124,6 +150,10 @@ const ToImagePage = () => {
   };
 
   const handleConvertToImage = () => {
+    cutVideo(500);
+    console.log(videoParts);
+
+    videoParts.forEach((videoPart) => decodeQrCode(videoPart));
     const binaryString = combineQrCodeDatas();
     const binary = binaryStringToBinary(binaryString);
     const imageDataUrl = convertBinaryToImageDataUrl(binary);
@@ -133,6 +163,7 @@ const ToImagePage = () => {
   return (
     <div>
       <Webcam audio={false} ref={webcamRef}></Webcam>
+      <br />
       {capturing ? (
         <button onClick={handleStopCaptureClick} className="primary">
           Stop
