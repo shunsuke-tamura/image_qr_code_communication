@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import ToImagePage from "./pages/ToImage";
 import ToQrPage from "./pages/ToQr";
 import TopPage from "./pages/Top";
-import ToCSPage from "./pages/ToCS";
+import ToCSCPage from "./pages/ToCSC";
 
 function App() {
   return (
@@ -12,7 +12,7 @@ function App() {
         <Route path="/" element={<TopPage />} />
         <Route path="/to-qr" element={<ToQrPage />} />
         <Route path="/to-image" element={<ToImagePage />} />
-        <Route path="/to-cs" element={<ToCSPage />} />
+        <Route path="/to-csc" element={<ToCSCPage />} />
       </Routes>
     </div>
   );
