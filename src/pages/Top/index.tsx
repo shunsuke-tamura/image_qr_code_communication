@@ -13,8 +13,8 @@ const TopPage = () => {
         to-image
       </button>
       <br />
-      <button className="primary" onClick={() => navigate("/to-csc")}>
-        to-csc
+      <button className="primary" onClick={() => navigate("/to-ccc")}>
+        to-ccc
       </button>
     </div>
   );
