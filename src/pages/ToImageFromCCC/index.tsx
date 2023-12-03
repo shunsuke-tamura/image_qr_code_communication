@@ -13,11 +13,50 @@ const ToImageFromCCCPage = () => {
       const img = new Image();
       img.onload = () => {
         const mat = cv.imread(img);
-        cv.imshow("output", mat);
+        cv.imshow("input", mat);
         mat.delete();
       };
       img.src = URL.createObjectURL(e.target.files[0]);
     }
+  };
+
+  const executeFindContours = () => {
+    const src = cv.imread("input");
+    const gray = new cv.Mat();
+    const binary = new cv.Mat();
+    const dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+    cv.imshow("gray", gray);
+    cv.threshold(gray, binary, 120, 200, cv.THRESH_BINARY);
+    cv.imshow("binary", binary);
+    // detect rectangles
+    const contours = new cv.MatVector();
+    const hierarchy = new cv.Mat();
+    cv.findContours(
+      binary,
+      contours,
+      hierarchy,
+      cv.RETR_EXTERNAL,
+      cv.CHAIN_APPROX_SIMPLE
+    );
+    console.log("contours.size(): " + contours.size());
+    // draw contours
+    for (let i = 0; i < contours.size(); ++i) {
+      const color = new cv.Scalar(
+        Math.round(Math.random() * 255),
+        Math.round(Math.random() * 255),
+        Math.round(Math.random() * 255)
+      );
+      cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
+    }
+    // show result
+    cv.imshow("result", dst);
+    src.delete();
+    dst.delete();
+    gray.delete();
+    binary.delete();
+    contours.delete();
+    hierarchy.delete();
   };
 
   return (
@@ -27,7 +66,20 @@ const ToImageFromCCCPage = () => {
       <div>
         <input type="file" onChange={onChangeFile} />
       </div>
-      <canvas id="output" />
+      <div>
+        <button className="primary" onClick={executeFindContours}>
+          Try it
+        </button>
+      </div>
+
+      <h3>input</h3>
+      <canvas id="input" />
+      <h3>gray scale</h3>
+      <canvas id="gray" />
+      <h3>binarization</h3>
+      <canvas id="binary" />
+      <h3>result</h3>
+      <canvas id="result" />
     </div>
   );
 };
