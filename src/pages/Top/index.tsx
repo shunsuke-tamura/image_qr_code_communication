@@ -12,6 +12,10 @@ const TopPage = () => {
       <button className="secondary" onClick={() => navigate("/to-image")}>
         to-image
       </button>
+      <br />
+      <button className="primary" onClick={() => navigate("/to-cs")}>
+        to-cs
+      </button>
     </div>
   );
 };
