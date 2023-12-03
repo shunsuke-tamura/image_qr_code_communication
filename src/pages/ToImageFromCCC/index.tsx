@@ -36,7 +36,7 @@ const ToImageFromCCCPage = () => {
       binary,
       contours,
       hierarchy,
-      cv.RETR_EXTERNAL,
+      cv.RETR_LIST,
       cv.CHAIN_APPROX_SIMPLE
     );
     console.log("contours.size(): " + contours.size());
