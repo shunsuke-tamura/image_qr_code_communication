@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { bgColorList } from "../../constants";
 
 declare global {
   interface Window {
@@ -10,7 +11,9 @@ declare global {
 const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
-  const [charImageStrList, setCharImageStrList] = useState<string[]>([]);
+  const [charImageStrList, setCharImageStrList] = useState<
+    { image: string; label: number }[]
+  >([]);
   const [show, setShow] = useState<boolean>(false);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,19 +26,6 @@ const ToImageFromCCCPage = () => {
       };
       img.src = URL.createObjectURL(e.target.files[0]);
     }
-  };
-
-  const cropImage = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    src: any,
-    rect: { x: number; y: number; width: number; height: number }
-  ) => {
-    const dst = src.roi(rect);
-    const croppedCanvas = document.createElement("canvas");
-    cv.imshow(croppedCanvas, dst);
-    const croppedImageStr = croppedCanvas.toDataURL("image/png");
-    dst.delete();
-    return croppedImageStr;
   };
 
   const executeFindContours = () => {
@@ -77,19 +67,73 @@ const ToImageFromCCCPage = () => {
         // if (i !== 2008) {
         continue;
       }
-      console.log(
-        i,
-        hierarchy.intPtr(0, i)[0],
-        hierarchy.intPtr(0, i)[1],
-        hierarchy.intPtr(0, i)[2],
-        hierarchy.intPtr(0, i)[3]
-      );
+      // console.log(
+      //   i,
+      //   hierarchy.intPtr(0, i)[0],
+      //   hierarchy.intPtr(0, i)[1],
+      //   hierarchy.intPtr(0, i)[2],
+      //   hierarchy.intPtr(0, i)[3]
+      // );
       cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
 
       // trim
       const rect = cv.boundingRect(contours.get(i));
-      const croppedImageStr = cropImage(src, rect);
-      setCharImageStrList((prev) => [...prev, croppedImageStr]);
+      const croped = src.roi(rect);
+
+      // convert to color index
+      const lowerColor = [200, 200, 200]; // [r, g, b]
+      const upperColor = [255, 255, 255]; // [r, g, b]
+
+      const height = croped.rows;
+      const width = croped.cols;
+      const rgbSum = [0, 0, 0];
+      let varidPixelCount = 0;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const rgb = croped.ucharPtr(y, x);
+          if (
+            rgb[0] >= lowerColor[0] &&
+            rgb[0] <= upperColor[0] &&
+            rgb[1] >= lowerColor[1] &&
+            rgb[1] <= upperColor[1] &&
+            rgb[2] >= lowerColor[2] &&
+            rgb[2] <= upperColor[2]
+          ) {
+            continue;
+          }
+          rgbSum[0] += rgb[0];
+          rgbSum[1] += rgb[1];
+          rgbSum[2] += rgb[2];
+          varidPixelCount++;
+        }
+      }
+      const rgbAverage = [
+        rgbSum[0] / varidPixelCount,
+        rgbSum[1] / varidPixelCount,
+        rgbSum[2] / varidPixelCount,
+      ];
+      const rgbList = bgColorList.map((bgColor) => {
+        return bgColor
+          .slice(1)
+          .match(/.{2}/g)!
+          .map((color) => parseInt(color, 16));
+      });
+      const diffList = rgbList.map((rgb) => {
+        return (
+          Math.abs(rgbAverage[0] - rgb[0]) +
+          Math.abs(rgbAverage[1] - rgb[1]) +
+          Math.abs(rgbAverage[2] - rgb[2])
+        );
+      });
+      const minDiffIndex = diffList.indexOf(Math.min(...diffList));
+
+      const croppedCanvas = document.createElement("canvas");
+      cv.imshow(croppedCanvas, croped);
+      const croppedImageStr = croppedCanvas.toDataURL("image/png");
+      setCharImageStrList((prev) => [
+        ...prev,
+        { image: croppedImageStr, label: minDiffIndex },
+      ]);
     }
     // show result
     cv.imshow("result", dst);
@@ -146,7 +190,8 @@ const ToImageFromCCCPage = () => {
             <div style={{ display: "flex" }}>
               {charImageStrList.map((charImageStr) => (
                 <div>
-                  <img style={{ margin: "2px" }} src={charImageStr} />
+                  <a>{charImageStr.label}</a>
+                  <img style={{ margin: "2px" }} src={charImageStr.image} />
                 </div>
               ))}
             </div>
