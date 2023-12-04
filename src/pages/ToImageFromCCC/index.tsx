@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { bgColorList } from "../../constants";
 
+import { createWorker } from "tesseract.js";
+const tesseractWorker = await createWorker("eng");
+
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,7 +15,7 @@ const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
   const [charImageStrList, setCharImageStrList] = useState<
-    { image: string; label: number }[]
+    { image: string; label: number; char: string }[]
   >([]);
   const [show, setShow] = useState<boolean>(false);
 
@@ -28,7 +31,7 @@ const ToImageFromCCCPage = () => {
     }
   };
 
-  const executeFindContours = () => {
+  const executeFindContours = async () => {
     setCharImageStrList([]);
     const src = cv.imread("input");
     const gray = new cv.Mat();
@@ -49,6 +52,7 @@ const ToImageFromCCCPage = () => {
       cv.CHAIN_APPROX_SIMPLE
     );
     console.log("contours.size(): " + contours.size());
+
     // draw contours
     const colors = [
       new cv.Scalar(255, 0, 0, 255),
@@ -127,12 +131,23 @@ const ToImageFromCCCPage = () => {
       });
       const minDiffIndex = diffList.indexOf(Math.min(...diffList));
 
+      // OCR
       const croppedCanvas = document.createElement("canvas");
-      cv.imshow(croppedCanvas, croped);
-      const croppedImageStr = croppedCanvas.toDataURL("image/png");
+      // cv.imshow(croppedCanvas, croped);
+      // const croppedImageStr = croppedCanvas.toDataURL("image/png");
+      cv.cvtColor(croped, gray, cv.COLOR_RGBA2GRAY, 0);
+      cv.threshold(gray, binary, 120, 200, cv.THRESH_BINARY);
+      cv.bitwise_not(binary, binary);
+      cv.imshow(croppedCanvas, binary);
+      const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
+      const ocrRes = await tesseractWorker.recognize(croppedBinaryImageStr);
       setCharImageStrList((prev) => [
         ...prev,
-        { image: croppedImageStr, label: minDiffIndex },
+        {
+          image: croppedBinaryImageStr,
+          label: minDiffIndex,
+          char: ocrRes.data.text,
+        },
       ]);
     }
     // show result
@@ -190,7 +205,9 @@ const ToImageFromCCCPage = () => {
             <div style={{ display: "flex" }}>
               {charImageStrList.map((charImageStr) => (
                 <div>
-                  <a>{charImageStr.label}</a>
+                  <a>
+                    {charImageStr.label}, {charImageStr.char}
+                  </a>
                   <img style={{ margin: "2px" }} src={charImageStr.image} />
                 </div>
               ))}
