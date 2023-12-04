@@ -3,7 +3,7 @@ import "./style.css";
 import { charList } from "../../constants";
 
 // 背景色から文字色を決定する関数
-// input: ex. "rgb(255, 255, 255)"
+// input: ex. "#ffffff"
 const getTextColor = (backgroundColor: string) => {
   const rgb = backgroundColor
     .slice(1)
