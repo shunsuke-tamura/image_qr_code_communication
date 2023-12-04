@@ -64,3 +64,14 @@ export const charList = [
   // "+",
   // "-",
 ];
+
+export const bgColorList = [
+  "#985050",
+  "#ff0000",
+  "#800000",
+  "#006400",
+  "#4682b4",
+  "#0600ff",
+  "#9900ff",
+  "#ff00ff",
+];
