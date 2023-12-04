@@ -142,7 +142,7 @@ const ToImageFromCCCPage = () => {
       </div>
       {show && (
         <div>
-          {splitArray(charImageStrList, 25).map((charImageStrList) => (
+          {splitArray(charImageStrList, 8).map((charImageStrList) => (
             <div style={{ display: "flex" }}>
               {charImageStrList.map((charImageStr) => (
                 <div>
