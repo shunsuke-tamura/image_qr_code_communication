@@ -16,7 +16,7 @@ const getTextColor = (backgroundColor: string) => {
 const ToCCCPage = () => {
   return (
     <div className="bg">
-      <h1 className="primary-text">ToCCCPage</h1>
+      <h1>ToCCCPage</h1>
       <div className="ccc-container">
         {charList.map((char) => (
           <div className="row">

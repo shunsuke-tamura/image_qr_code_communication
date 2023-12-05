@@ -58,26 +58,26 @@ const ToImageFromCCCPage = () => {
       new cv.Scalar(255, 0, 0, 255),
       new cv.Scalar(255, 255, 255, 255),
     ];
-    // a.最後[contour] -> b.その親[contour] -> c.prev[int] = codeContainerIdx
+    // a.最後[contour] -> b.その親[contour] = codeContainer
     const a = hierarchy.intPtr(0, contours.size() - 1);
-    const b = hierarchy.intPtr(0, a[3]);
-    const c = b[1];
-    const codeContainerIdx = c;
+    const b = a[3];
+    const codeContainerIdx = b;
     for (let i = 0; i < contours.size(); ++i) {
       const color = colors[hierarchy.intPtr(0, i)[3] !== -1 ? 1 : 0];
 
       // if (hierarchy.intPtr(0, i)[3] === -1) {
       if (hierarchy.intPtr(0, i)[3] !== codeContainerIdx) {
-        // if (i !== 2008) {
+        // if (hierarchy.intPtr(0, i)[3] !== 295) {
+        // if (i !== 503) {
         continue;
       }
-      // console.log(
-      //   i,
-      //   hierarchy.intPtr(0, i)[0],
-      //   hierarchy.intPtr(0, i)[1],
-      //   hierarchy.intPtr(0, i)[2],
-      //   hierarchy.intPtr(0, i)[3]
-      // );
+      console.log(
+        i,
+        hierarchy.intPtr(0, i)[0],
+        hierarchy.intPtr(0, i)[1],
+        hierarchy.intPtr(0, i)[2],
+        hierarchy.intPtr(0, i)[3]
+      );
       cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
 
       // trim
