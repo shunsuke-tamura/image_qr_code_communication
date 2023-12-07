@@ -18,8 +18,8 @@
 .code-container {
   /* border: 2px solid black; */
   padding: 2px;
-  margin: 1px;
-  aspect-ratio: 1;
+  margin: 1px 0;
+  /* aspect-ratio: 1; */
 }
 
 .code {
