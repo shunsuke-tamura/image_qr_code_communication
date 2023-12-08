@@ -21,6 +21,7 @@ const ToImageFromCCCPage = () => {
     { image: string; sentence: string }[]
   >([]);
   const [show, setShow] = useState<boolean>(false);
+  const [showS, setShowS] = useState<boolean>(false);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -167,8 +168,11 @@ const ToImageFromCCCPage = () => {
   const cropeSentenceImage = async (srcImage: any) => {
     const gray = new cv.Mat();
     const binary = new cv.Mat();
+    const dst = cv.Mat.zeros(srcImage.rows, srcImage.cols, cv.CV_8UC3);
     cv.cvtColor(srcImage, gray, cv.COLOR_RGBA2GRAY, 0);
     cv.threshold(gray, binary, 170, 200, cv.THRESH_BINARY);
+    cv.imshow("grayS", gray);
+    cv.imshow("binaryS", binary);
     // detect rectangles
     const contours = new cv.MatVector();
     const hierarchy = new cv.Mat();
@@ -188,6 +192,7 @@ const ToImageFromCCCPage = () => {
         // if (i !== 503) {
         continue;
       }
+      cv.drawContours(dst, contours, i, new cv.Scalar(255, 255, 255, 255), 1);
 
       // trim
       const sentenceRect = cv.boundingRect(contours.get(i));
@@ -204,6 +209,8 @@ const ToImageFromCCCPage = () => {
         { image: croppedBinaryImageStr, sentence: ocrRes.data.text },
       ]);
     }
+    cv.imshow("resultS", dst);
+    dst.delete();
     gray.delete();
     binary.delete();
     contours.delete();
@@ -270,6 +277,25 @@ const ToImageFromCCCPage = () => {
               ))}
             </div>
           ))}
+        </div>
+      )}
+
+      <h3>gray scale</h3>
+      <canvas id="grayS" />
+      <h3>binarization</h3>
+      <canvas id="binaryS" />
+      <h3>result</h3>
+      <canvas id="resultS" />
+      <div>
+        <button
+          className={showS ? "secondary" : "primary"}
+          onClick={() => setShowS((prev) => !prev)}
+        >
+          {showS ? "Hide" : "Show"}
+        </button>
+      </div>
+      {showS && (
+        <div>
           <div>sentences</div>
           {sentenceImageStrList.map((sentence, idx) => (
             <div key={`sentence${idx}`}>
