@@ -16,7 +16,7 @@ const getTextColor = (backgroundColor: string) => {
     .match(/.{2}/g)!
     .map((color) => parseInt(color, 16));
   const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
-  return brightness > 125 ? "#000000" : "#ffffff";
+  return brightness > 140 ? "#000000" : "#ffffff";
 };
 
 const randomBgColor = () => {
@@ -56,36 +56,36 @@ const ToCCCPage = () => {
       </div>
       <br />
       <div className="ccc-container">
-        {[...Array(10)].map(() => {
-          const bgColor = randomBgColor();
+        {[...Array(10)].map((_, idx1) => {
           return (
-            <div className="row">
-              {/* {makeSentence()
-              .split(" ")
-              .map((word) => {
-                const bgColor = randomBgColor();
-                return (
-                  <div
-                    className="code-container"
-                    style={{ backgroundColor: bgColor }}
-                  >
-                    <a
-                      className="code"
-                      style={{ color: getTextColor(bgColor) }}
+            <div className="sentence-container row">
+              {makeSentence()
+                .split(" ")
+                .map((word, idx2) => {
+                  // const bgColor = randomBgColor();
+                  const bgColor = bgColorList[(idx1 + idx2) % 8];
+                  return (
+                    <div
+                      className="code-container"
+                      style={{ backgroundColor: bgColor }}
                     >
-                      {word}
-                    </a>
-                  </div>
-                );
-              })} */}
-              <div
-                className="code-container"
-                style={{ backgroundColor: bgColor }}
-              >
-                <a className="code" style={{ color: getTextColor(bgColor) }}>
-                  {makeSentence()}
-                </a>
-              </div>
+                      <a
+                        className="code"
+                        style={{ color: getTextColor(bgColor) }}
+                      >
+                        {word}
+                      </a>
+                    </div>
+                  );
+                })}
+              {/* <div
+                  className="code-container"
+                  style={{ backgroundColor: bgColor }}
+                >
+                  <a className="code" style={{ color: getTextColor(bgColor) }}>
+                    {makeSentence()}
+                  </a>
+                </div> */}
             </div>
           );
         })}

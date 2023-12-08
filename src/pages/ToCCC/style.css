@@ -13,12 +13,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  width: fit-content;
+}
+
+.sentence-container {
+  /* border: 3px solid rgb(100, 220, 100); */
+  padding: 3px;
+  margin: 1px 0;
+  background-color: rgb(100, 220, 100);
+  /* 輝度170以上 */
 }
 
 .code-container {
   /* border: 2px solid black; */
   padding: 2px;
-  margin: 1px 0;
+  margin: 1px;
   /* aspect-ratio: 1; */
 }
 
