@@ -2,7 +2,6 @@ import "./style.css";
 
 import {
   bgColorList,
-  charList,
   subjectList,
   verbList,
   objectList,
@@ -20,21 +19,6 @@ const getTextColor = (backgroundColor: string) => {
     .map((color) => parseInt(color, 16));
   const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
   return brightness > 140 ? "#000000" : "#ffffff";
-};
-
-const randomBgColor = () => {
-  return bgColorList[Math.floor(Math.random() * bgColorList.length)];
-};
-
-const randomInt = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min) + min);
-};
-
-const makeSentence = () => {
-  const subject = subjectList[Math.floor(Math.random() * subjectList.length)];
-  const verb = verbList[Math.floor(Math.random() * verbList.length)];
-  const object = objectList[Math.floor(Math.random() * objectList.length)];
-  return `${subject} ${verb} ${randomInt(1, 128)} ${object}.`;
 };
 
 type PartInfo = {
