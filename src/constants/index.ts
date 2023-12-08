@@ -350,3 +350,5 @@ export const objectList = [
   "wine",
   "wood",
 ];
+
+export const maxNum = 512;

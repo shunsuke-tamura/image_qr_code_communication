@@ -6,7 +6,10 @@ import {
   subjectList,
   verbList,
   objectList,
+  maxNum,
 } from "../../constants";
+import { useState } from "react";
+import { splitArray } from "../../common";
 
 // 背景色から文字色を決定する関数
 // input: ex. "#ffffff"
@@ -34,62 +37,159 @@ const makeSentence = () => {
   return `${subject} ${verb} ${randomInt(1, 128)} ${object}.`;
 };
 
+type PartInfo = {
+  color: string;
+  part: string;
+};
+
+type Bit = 0 | 1;
+
 const ToCCCPage = () => {
-  return (
-    <div className="bg">
-      <h1>ToCCCPage</h1>
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [cccContainer, setCccContainer] = useState<JSX.Element | null>(null);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+    }
+  };
+
+  const uint8ArrayToBitArray = (uint8Array: Uint8Array) => {
+    const bitArray: Bit[] = [];
+
+    uint8Array.forEach((byte) => {
+      for (let i = 7; i >= 0; i--) {
+        bitArray.push(byte & (1 << i) ? 1 : 0);
+      }
+    });
+
+    return bitArray;
+  };
+
+  const convertImageToBitArray = (file: File): Promise<Bit[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsArrayBuffer(file);
+      reader.onload = (e) => {
+        console.log(e.target?.result);
+
+        const imageBinaryArray = reader.result as ArrayBuffer;
+        if (imageBinaryArray.byteLength > 0) {
+          resolve(uint8ArrayToBitArray(new Uint8Array(imageBinaryArray)));
+        } else {
+          reject(new Error("Failed to convert image to base64"));
+        }
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const convertStringToCCC = (imageBitArray: Bit[]) => {
+    const colorRange = Math.log2(bgColorList.length);
+    const subjectRange = Math.log2(subjectList.length);
+    const verbRange = Math.log2(verbList.length);
+    const numRange = Math.log2(maxNum);
+    const objectRange = Math.log2(objectList.length);
+    const sentenceRange =
+      colorRange * 4 + subjectRange + verbRange + objectRange + numRange;
+    const partPropertyList = [
+      {
+        range: subjectRange,
+        list: subjectList,
+      },
+      {
+        range: verbRange,
+        list: verbList,
+      },
+      {
+        range: numRange,
+        list: [...Array(maxNum)].map((_, idx) => (idx + 1).toString(10)),
+      },
+      {
+        range: objectRange,
+        list: objectList,
+      },
+    ];
+
+    // 余った部分を0で埋める
+    const adjustment = (result: Bit[][]) => {
+      while (result[result.length - 1].length < sentenceRange) {
+        result[result.length - 1].push(0);
+      }
+    };
+    const sentenceBinaryList = splitArray(
+      imageBitArray,
+      sentenceRange,
+      adjustment
+    );
+    console.log(imageBitArray);
+    console.log(sentenceBinaryList);
+
+    const sentenceList: PartInfo[][] = [];
+    for (const sentenceBinary of sentenceBinaryList) {
+      const partList: PartInfo[] = [];
+      let doneLength = 0;
+      for (const partProperty of partPropertyList) {
+        const colorIdx = parseInt(
+          sentenceBinary.slice(doneLength, doneLength + colorRange).join(""),
+          2
+        );
+        doneLength += colorRange;
+        const partIdx = parseInt(
+          sentenceBinary
+            .slice(doneLength, doneLength + partProperty.range)
+            .join(""),
+          2
+        );
+        doneLength += partProperty.range;
+        partList.push({
+          color: bgColorList[colorIdx],
+          part: partProperty.list[partIdx],
+        });
+      }
+      sentenceList.push(partList);
+    }
+    console.log(sentenceList);
+
+    setCccContainer(
       <div className="ccc-container">
-        {charList.map((char) => (
-          <div className="row">
-            {bgColorList.map((bgColor) => (
+        {sentenceList.map((sentence) => (
+          <div className="sentence-container row">
+            {sentence.map((part) => (
               <div
                 className="code-container"
-                style={{ backgroundColor: bgColor }}
+                style={{ backgroundColor: part.color }}
               >
-                <a className="code" style={{ color: getTextColor(bgColor) }}>
-                  {char}
+                <a className="code" style={{ color: getTextColor(part.color) }}>
+                  {part.part}
                 </a>
               </div>
             ))}
           </div>
         ))}
       </div>
+    );
+  };
+
+  const executeHandler = async () => {
+    if (!imageFile) {
+      return;
+    }
+    const binaryArray = await convertImageToBitArray(imageFile);
+    const cccContainer = convertStringToCCC(binaryArray);
+    return cccContainer;
+  };
+
+  return (
+    <div className="bg">
+      <h1>ToCCCPage</h1>
+      <input type="file" accept="image/*" onChange={handleImageChange} />
       <br />
-      <div className="ccc-container">
-        {[...Array(10)].map((_, idx1) => {
-          return (
-            <div className="sentence-container row">
-              {makeSentence()
-                .split(" ")
-                .map((word, idx2) => {
-                  // const bgColor = randomBgColor();
-                  const bgColor = bgColorList[(idx1 + idx2) % 8];
-                  return (
-                    <div
-                      className="code-container"
-                      style={{ backgroundColor: bgColor }}
-                    >
-                      <a
-                        className="code"
-                        style={{ color: getTextColor(bgColor) }}
-                      >
-                        {word}
-                      </a>
-                    </div>
-                  );
-                })}
-              {/* <div
-                  className="code-container"
-                  style={{ backgroundColor: bgColor }}
-                >
-                  <a className="code" style={{ color: getTextColor(bgColor) }}>
-                    {makeSentence()}
-                  </a>
-                </div> */}
-            </div>
-          );
-        })}
-      </div>
+      <button className="primary" onClick={executeHandler}>
+        Try it
+      </button>
+      {cccContainer}
     </div>
   );
 };
