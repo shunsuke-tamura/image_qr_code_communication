@@ -2,6 +2,7 @@ import { useState } from "react";
 import { bgColorList } from "../../constants";
 
 import { createWorker } from "tesseract.js";
+import { splitArray } from "../../common";
 const tesseractWorker = await createWorker("eng");
 
 declare global {
@@ -224,15 +225,6 @@ const ToImageFromCCCPage = () => {
     cropeWordImage(src);
     await cropeSentenceImage(src);
     src.delete();
-  };
-
-  // 配列をn個ずつに分割する
-  const splitArray = <T,>(array: T[], n: number): T[][] => {
-    const result = [];
-    for (let i = 0; i < array.length; i += n) {
-      result.push(array.slice(i, i + n));
-    }
-    return result;
   };
 
   return (
