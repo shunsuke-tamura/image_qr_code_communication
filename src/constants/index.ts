@@ -352,3 +352,29 @@ export const objectList = [
 ];
 
 export const maxNum = 512;
+
+export const colorRange = Math.log2(bgColorList.length);
+const subjectRange = Math.log2(subjectList.length);
+const verbRange = Math.log2(verbList.length);
+const numRange = Math.log2(maxNum);
+const objectRange = Math.log2(objectList.length);
+export const sentenceRange =
+  colorRange * 4 + subjectRange + verbRange + objectRange + numRange;
+export const partPropertyList = [
+  {
+    range: subjectRange,
+    list: subjectList,
+  },
+  {
+    range: verbRange,
+    list: verbList,
+  },
+  {
+    range: numRange,
+    list: [...Array(maxNum)].map((_, idx) => (idx + 1).toString(10)),
+  },
+  {
+    range: objectRange,
+    list: objectList,
+  },
+];

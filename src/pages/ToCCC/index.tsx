@@ -2,10 +2,9 @@ import "./style.css";
 
 import {
   bgColorList,
-  subjectList,
-  verbList,
-  objectList,
-  maxNum,
+  colorRange,
+  partPropertyList,
+  sentenceRange,
 } from "../../constants";
 import { useState } from "react";
 import { splitArray } from "../../common";
@@ -26,7 +25,7 @@ type PartInfo = {
   part: string;
 };
 
-type Bit = 0 | 1;
+export type Bit = 0 | 1;
 
 const ToCCCPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -70,32 +69,6 @@ const ToCCCPage = () => {
   };
 
   const convertStringToCCC = (imageBitArray: Bit[]) => {
-    const colorRange = Math.log2(bgColorList.length);
-    const subjectRange = Math.log2(subjectList.length);
-    const verbRange = Math.log2(verbList.length);
-    const numRange = Math.log2(maxNum);
-    const objectRange = Math.log2(objectList.length);
-    const sentenceRange =
-      colorRange * 4 + subjectRange + verbRange + objectRange + numRange;
-    const partPropertyList = [
-      {
-        range: subjectRange,
-        list: subjectList,
-      },
-      {
-        range: verbRange,
-        list: verbList,
-      },
-      {
-        range: numRange,
-        list: [...Array(maxNum)].map((_, idx) => (idx + 1).toString(10)),
-      },
-      {
-        range: objectRange,
-        list: objectList,
-      },
-    ];
-
     // 余った部分を0で埋める
     const adjustment = (result: Bit[][]) => {
       while (result[result.length - 1].length < sentenceRange) {
