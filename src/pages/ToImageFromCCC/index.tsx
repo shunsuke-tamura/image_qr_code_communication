@@ -15,8 +15,13 @@ declare global {
 const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
+  const tempDataList: {
+    image: string;
+    label: number;
+    word: string | undefined;
+  }[] = [];
   const [wordImageStrList, setWordImageStrList] = useState<
-    { image: string; label: number }[]
+    { image: string; label: number; word: string | undefined }[]
   >([]);
   const [sentenceImageStrList, setSentenceImageStrList] = useState<
     { image: string; sentence: string }[]
@@ -98,71 +103,79 @@ const ToImageFromCCCPage = () => {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cropeWordImage = (srcImage: any) => {
-    const gray = new cv.Mat();
-    const binary = new cv.Mat();
-    const dst = cv.Mat.zeros(srcImage.rows, srcImage.cols, cv.CV_8UC3);
-    cv.cvtColor(srcImage, gray, cv.COLOR_RGBA2GRAY, 0);
-    cv.imshow("gray", gray);
-    cv.threshold(gray, binary, 140, 200, cv.THRESH_BINARY);
-    cv.imshow("binary", binary);
-    // detect rectangles
-    const contours = new cv.MatVector();
-    const hierarchy = new cv.Mat();
-    cv.findContours(
-      binary,
-      contours,
-      hierarchy,
-      cv.RETR_CCOMP, // RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE,
-      cv.CHAIN_APPROX_SIMPLE
-    );
+  const cropeWordImage = (srcImage: any): Promise<void> => {
+    return new Promise((resolve) => {
+      const gray = new cv.Mat();
+      const binary = new cv.Mat();
+      const dst = cv.Mat.zeros(srcImage.rows, srcImage.cols, cv.CV_8UC3);
+      cv.cvtColor(srcImage, gray, cv.COLOR_RGBA2GRAY, 0);
+      cv.imshow("gray", gray);
+      cv.threshold(gray, binary, 140, 200, cv.THRESH_BINARY);
+      cv.imshow("binary", binary);
+      // detect rectangles
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(
+        binary,
+        contours,
+        hierarchy,
+        cv.RETR_CCOMP, // RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE,
+        cv.CHAIN_APPROX_SIMPLE
+      );
 
-    // draw contours
-    const colors = [
-      new cv.Scalar(255, 0, 0, 255),
-      new cv.Scalar(255, 255, 255, 255),
-    ];
-    // a.最後[contour] -> b.その親[contour] = codeContainer
-    const a = hierarchy.intPtr(0, contours.size() - 1);
-    const b = a[3];
-    const codeContainerIdx = b;
-    for (let i = 0; i < contours.size(); ++i) {
-      const color = colors[hierarchy.intPtr(0, i)[3] !== -1 ? 1 : 0];
+      // draw contours
+      const colors = [
+        new cv.Scalar(255, 0, 0, 255),
+        new cv.Scalar(255, 255, 255, 255),
+      ];
+      // a.最後[contour] -> b.その親[contour] = codeContainer
+      const a = hierarchy.intPtr(0, contours.size() - 1);
+      const b = a[3];
+      const codeContainerIdx = b;
+      for (let i = 0; i < contours.size(); ++i) {
+        const color = colors[hierarchy.intPtr(0, i)[3] !== -1 ? 1 : 0];
 
-      // if (hierarchy.intPtr(0, i)[3] === -1) {
-      if (hierarchy.intPtr(0, i)[3] !== codeContainerIdx) {
-        // if (hierarchy.intPtr(0, i)[3] !== 295) {
-        // if (i !== 503) {
-        continue;
+        // if (hierarchy.intPtr(0, i)[3] === -1) {
+        if (hierarchy.intPtr(0, i)[3] !== codeContainerIdx) {
+          // if (hierarchy.intPtr(0, i)[3] !== 295) {
+          // if (i !== 503) {
+          continue;
+        }
+        // console.log(
+        //   i,
+        //   hierarchy.intPtr(0, i)[0],
+        //   hierarchy.intPtr(0, i)[1],
+        //   hierarchy.intPtr(0, i)[2],
+        //   hierarchy.intPtr(0, i)[3]
+        // );
+        cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
+
+        // trim
+        const wordRect = cv.boundingRect(contours.get(i));
+        const wordCroped = srcImage.roi(wordRect);
+
+        const colorIdx = calcColorIdxfromWordImage(wordCroped);
+        const croppedCanvas = document.createElement("canvas");
+        cv.imshow(croppedCanvas, wordCroped);
+        const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
+        setWordImageStrList((prev) => [
+          ...prev,
+          { image: croppedBinaryImageStr, label: colorIdx, word: undefined },
+        ]);
+        tempDataList.push({
+          image: croppedBinaryImageStr,
+          label: colorIdx,
+          word: undefined,
+        });
       }
-      // console.log(
-      //   i,
-      //   hierarchy.intPtr(0, i)[0],
-      //   hierarchy.intPtr(0, i)[1],
-      //   hierarchy.intPtr(0, i)[2],
-      //   hierarchy.intPtr(0, i)[3]
-      // );
-      cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100);
-
-      // trim
-      const wordRect = cv.boundingRect(contours.get(i));
-      const wordCroped = srcImage.roi(wordRect);
-
-      const colorIdx = calcColorIdxfromWordImage(wordCroped);
-      const croppedCanvas = document.createElement("canvas");
-      cv.imshow(croppedCanvas, wordCroped);
-      const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
-      setWordImageStrList((prev) => [
-        ...prev,
-        { image: croppedBinaryImageStr, label: colorIdx },
-      ]);
-    }
-    cv.imshow("result", dst);
-    dst.delete();
-    gray.delete();
-    binary.delete();
-    contours.delete();
-    hierarchy.delete();
+      cv.imshow("result", dst);
+      dst.delete();
+      gray.delete();
+      binary.delete();
+      contours.delete();
+      hierarchy.delete();
+      resolve();
+    });
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -186,6 +199,7 @@ const ToImageFromCCCPage = () => {
     );
     // a.最後[contour]を親とする = sentenceContainer
     const sentenceContainerIdx = hierarchy.intPtr(0, contours.size() - 1)[3];
+    let sentenceCount = 0;
     for (let i = 0; i < contours.size(); ++i) {
       // if (hierarchy.intPtr(0, i)[3] === -1) {
       if (hierarchy.intPtr(0, i)[3] !== sentenceContainerIdx) {
@@ -195,6 +209,7 @@ const ToImageFromCCCPage = () => {
       }
       cv.drawContours(dst, contours, i, new cv.Scalar(255, 255, 255, 255), 1);
 
+      sentenceCount++;
       // trim
       const sentenceRect = cv.boundingRect(contours.get(i));
       const sentenceCroped = binary.roi(sentenceRect);
@@ -209,6 +224,16 @@ const ToImageFromCCCPage = () => {
         ...prev,
         { image: croppedBinaryImageStr, sentence: ocrRes.data.text },
       ]);
+
+      // set word
+      if (tempDataList.length < 1) {
+        continue;
+      }
+      const wordList = ocrRes.data.text.split(" ");
+      for (let j = 0; j < wordList.length; j++) {
+        tempDataList[(sentenceCount - 1) * wordList.length + j].word =
+          wordList[wordList.length - 1 - j];
+      }
     }
     cv.imshow("resultS", dst);
     dst.delete();
@@ -216,13 +241,15 @@ const ToImageFromCCCPage = () => {
     binary.delete();
     contours.delete();
     hierarchy.delete();
+
+    setWordImageStrList(tempDataList);
   };
 
   const executeHandler = async () => {
     setWordImageStrList([]);
     setSentenceImageStrList([]);
     const src = cv.imread("input");
-    cropeWordImage(src);
+    await cropeWordImage(src);
     await cropeSentenceImage(src);
     src.delete();
   };
@@ -263,7 +290,9 @@ const ToImageFromCCCPage = () => {
             <div style={{ display: "flex" }} key={`row${idx1}`}>
               {wordImageStrList.map((wordImageStr, idx2) => (
                 <div key={`word${idx1}-${idx2}`}>
-                  <a>{wordImageStr.label}</a>
+                  <a>
+                    {wordImageStr.label}, {wordImageStr.word}
+                  </a>
                   <img style={{ margin: "2px" }} src={wordImageStr.image} />
                 </div>
               ))}
