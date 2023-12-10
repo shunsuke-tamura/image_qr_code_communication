@@ -378,3 +378,10 @@ export const partPropertyList = [
     list: objectList,
   },
 ];
+
+export const partCategory = {
+  subject: 0,
+  verb: 1,
+  number: 2,
+  object: 3,
+};

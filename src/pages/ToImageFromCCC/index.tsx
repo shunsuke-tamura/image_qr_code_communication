@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { bgColorList } from "../../constants";
+import { bgColorList, partPropertyList } from "../../constants";
 
 import { createWorker } from "tesseract.js";
 import { splitArray } from "../../common";
+import { Bit } from "../ToCCC";
+import { PartCategory } from "../../types";
 const tesseractWorker = await createWorker("eng");
 
 declare global {
@@ -19,13 +21,23 @@ const ToImageFromCCCPage = () => {
     image: string;
     label: number;
     word: string | undefined;
+    category: PartCategory | undefined;
   }[] = [];
   const [wordImageStrList, setWordImageStrList] = useState<
-    { image: string; label: number; word: string | undefined }[]
+    {
+      image: string;
+      label: number;
+      word: string | undefined;
+      category: PartCategory | undefined;
+    }[]
   >([]);
   const [sentenceImageStrList, setSentenceImageStrList] = useState<
     { image: string; sentence: string }[]
   >([]);
+  const imageBinaryArray: Bit[] = [];
+  const [convertedImageStr, setConvertedImageStr] = useState<
+    string | undefined
+  >(undefined);
   const [show, setShow] = useState<boolean>(false);
   const [showS, setShowS] = useState<boolean>(false);
 
@@ -102,6 +114,22 @@ const ToImageFromCCCPage = () => {
     return minDiffIndex;
   };
 
+  const convertWordToBinary = (word: string, category: PartCategory): Bit => {
+    const wordIdx = partPropertyList[category].list.findIndex(
+      (part) => part.toLowerCase() === word.toLowerCase()
+    );
+    return parseInt(wordIdx.toString(2), 2) as Bit;
+  };
+
+  function bitArrayToUint8Array(bitArray: Bit[]) {
+    const bytes = [];
+    for (let i = 0; i < bitArray.length; i += 8) {
+      const byte = bitArray.slice(i, i + 8).join("");
+      bytes.push(parseInt(byte, 2));
+    }
+    return new Uint8Array(bytes);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cropeWordImage = (srcImage: any): Promise<void> => {
     return new Promise((resolve) => {
@@ -160,12 +188,18 @@ const ToImageFromCCCPage = () => {
         const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
         setWordImageStrList((prev) => [
           ...prev,
-          { image: croppedBinaryImageStr, label: colorIdx, word: undefined },
+          {
+            image: croppedBinaryImageStr,
+            label: colorIdx,
+            word: undefined,
+            category: undefined,
+          },
         ]);
         tempDataList.push({
           image: croppedBinaryImageStr,
           label: colorIdx,
           word: undefined,
+          category: undefined,
         });
       }
       cv.imshow("result", dst);
@@ -233,6 +267,8 @@ const ToImageFromCCCPage = () => {
       for (let j = 0; j < wordList.length; j++) {
         tempDataList[(sentenceCount - 1) * wordList.length + j].word =
           wordList[wordList.length - 1 - j];
+        tempDataList[(sentenceCount - 1) * wordList.length + j].category =
+          j as PartCategory;
       }
     }
     cv.imshow("resultS", dst);
@@ -245,12 +281,24 @@ const ToImageFromCCCPage = () => {
     setWordImageStrList(tempDataList);
   };
 
+  const convertToImage = () => {
+    tempDataList.reverse().map((data) => {
+      imageBinaryArray.push(parseInt(data.label.toString(2), 2) as Bit);
+      imageBinaryArray.push(convertWordToBinary(data.word!, data.category!));
+    });
+    const uint8Array = bitArrayToUint8Array(imageBinaryArray);
+    const blob = new Blob([uint8Array], { type: "image/png" });
+    const convertedImageStr = URL.createObjectURL(blob);
+    setConvertedImageStr(convertedImageStr);
+  };
+
   const executeHandler = async () => {
     setWordImageStrList([]);
     setSentenceImageStrList([]);
     const src = cv.imread("input");
     await cropeWordImage(src);
     await cropeSentenceImage(src);
+    convertToImage();
     src.delete();
   };
 
@@ -326,6 +374,8 @@ const ToImageFromCCCPage = () => {
           ))}
         </div>
       )}
+      <h3>converted image</h3>
+      {convertedImageStr && <img src={convertedImageStr} />}
     </div>
   );
 };
