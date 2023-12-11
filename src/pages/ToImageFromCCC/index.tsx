@@ -17,7 +17,7 @@ declare global {
 const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
-  const tempDataList: {
+  let tempDataList: {
     image: string;
     label: number;
     word: string | undefined;
@@ -34,6 +34,7 @@ const ToImageFromCCCPage = () => {
   const [sentenceImageStrList, setSentenceImageStrList] = useState<
     { image: string; sentence: string }[]
   >([]);
+  const [srcImageList, setSrcImageList] = useState<File[]>([]);
   const imageBinaryArray: Bit[] = [];
   const [convertedImageStr, setConvertedImageStr] = useState<
     string | undefined
@@ -50,6 +51,7 @@ const ToImageFromCCCPage = () => {
         mat.delete();
       };
       img.src = URL.createObjectURL(e.target.files[0]);
+      setSrcImageList((prev) => [...prev, e.target.files![0]]);
     }
   };
 
@@ -295,10 +297,21 @@ const ToImageFromCCCPage = () => {
   const executeHandler = async () => {
     setWordImageStrList([]);
     setSentenceImageStrList([]);
-    const src = cv.imread("input");
-    await cropeWordImage(src);
-    await cropeSentenceImage(src);
-    convertToImage();
+    let src = new cv.Mat();
+    for (const srcImage of srcImageList) {
+      // const src = cv.imread("input");
+      const img = new Image();
+      img.src = URL.createObjectURL(srcImage);
+      img.onload = async () => {
+        src = cv.imread(img);
+        tempDataList = [];
+        setWordImageStrList([]);
+        setSentenceImageStrList([]);
+        await cropeWordImage(src);
+        await cropeSentenceImage(src);
+        convertToImage();
+      };
+    }
     src.delete();
   };
 
@@ -308,6 +321,9 @@ const ToImageFromCCCPage = () => {
 
       <div>
         <input type="file" onChange={onChangeFile} />
+        {srcImageList.map((srcImage) => (
+          <div>{srcImage.name}</div>
+        ))}
       </div>
       <div>
         <button className="primary" onClick={executeHandler}>
