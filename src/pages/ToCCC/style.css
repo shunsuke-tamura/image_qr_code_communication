@@ -26,13 +26,13 @@
 
 .code-container {
   /* border: 2px solid black; */
-  padding: 2px;
+  padding: 0 2px;
   margin: 1px;
   /* aspect-ratio: 1; */
 }
 
 .code {
-  font-size: 18px;
+  font-size: 12px;
   /* font-weight: bolder; */
   font-family: Courier, monospace
 }
