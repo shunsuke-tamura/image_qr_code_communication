@@ -114,22 +114,24 @@ const ToCCCPage = () => {
         {splitArray(sentenceList, 78).map((sentences78) => (
           <div className="ccc-container" style={{ marginTop: "15px" }}>
             {splitArray(sentences78, 3).map((sentences2) => (
-              <div className="sentence-container row">
-                {sentences2.map((sentence) =>
-                  sentence.map((part) => (
-                    <div
-                      className="code-container"
-                      style={{ backgroundColor: part.color }}
-                    >
-                      <a
-                        className="code"
-                        style={{ color: getTextColor(part.color) }}
+              <div className="row">
+                {sentences2.map((sentence) => (
+                  <div className="sentence-container row">
+                    {sentence.map((part) => (
+                      <div
+                        className="code-container"
+                        style={{ backgroundColor: part.color }}
                       >
-                        {part.part}
-                      </a>
-                    </div>
-                  ))
-                )}
+                        <a
+                          className="code"
+                          style={{ color: getTextColor(part.color) }}
+                        >
+                          {part.part}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
             ))}
           </div>

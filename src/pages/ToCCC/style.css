@@ -9,7 +9,7 @@
   padding: 16px;
 }
 
-.ccc-container>.row {
+.row {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -19,7 +19,7 @@
 .sentence-container {
   /* border: 3px solid rgb(100, 220, 100); */
   padding: 3px;
-  margin: 1px 0;
+  margin: 1px 1px;
   background-color: rgb(100, 220, 100);
   /* 輝度170以上 */
 }
