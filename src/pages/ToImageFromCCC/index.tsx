@@ -51,7 +51,7 @@ const ToImageFromCCCPage = () => {
         mat.delete();
       };
       img.src = URL.createObjectURL(e.target.files[0]);
-      setSrcImageList((prev) => [...prev, e.target.files![0]]);
+      setSrcImageList((prev) => [...prev, ...e.target.files!]);
     }
   };
 
@@ -320,7 +320,7 @@ const ToImageFromCCCPage = () => {
       <h1>to-image-from-ccc</h1>
 
       <div>
-        <input type="file" onChange={onChangeFile} />
+        <input type="file" onChange={onChangeFile} multiple />
         {srcImageList.map((srcImage) => (
           <div>{srcImage.name}</div>
         ))}
