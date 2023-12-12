@@ -226,6 +226,7 @@ const ToImageFromCCCPage = () => {
     // a.最後[contour]を親とする = sentenceContainer
     const sentenceContainerIdx = hierarchy.intPtr(0, contours.size() - 1)[3];
     let sentenceCount = 0;
+    const temp: { image: string; sentence: string }[] = [];
     for (let i = 0; i < contours.size(); ++i) {
       // if (hierarchy.intPtr(0, i)[3] === -1) {
       if (hierarchy.intPtr(0, i)[3] !== sentenceContainerIdx) {
@@ -246,10 +247,13 @@ const ToImageFromCCCPage = () => {
       cv.imshow(croppedCanvas, sentenceCroped);
       const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
       const ocrRes = await tesseractWorker.recognize(croppedBinaryImageStr);
-      setSentenceImageStrList((prev) => [
-        ...prev,
-        { image: croppedBinaryImageStr, sentence: ocrRes.data.text },
-      ]);
+      if (ocrRes.data.text === "") {
+        console.log(croppedBinaryImageStr, ocrRes.data.text);
+      }
+      temp.push({
+        image: croppedBinaryImageStr,
+        sentence: ocrRes.data.text,
+      });
 
       // set word
       if (wordDataList.length < 1) {
@@ -270,6 +274,8 @@ const ToImageFromCCCPage = () => {
     contours.delete();
     hierarchy.delete();
 
+    temp.reverse();
+    setSentenceImageStrList((prev) => [...prev, ...temp]);
     return wordDataList;
   };
 
