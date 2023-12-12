@@ -111,9 +111,9 @@ const ToCCCPage = () => {
 
     setCccContainer(
       <div>
-        {splitArray(sentenceList, 78).map((sentences78) => (
+        {splitArray(sentenceList, 75).map((sentences75) => (
           <div className="ccc-container" style={{ marginTop: "15px" }}>
-            {splitArray(sentences78, 3).map((sentences2) => (
+            {splitArray(sentences75, 3).map((sentences2) => (
               <div className="row">
                 {sentences2.map((sentence) => (
                   <div className="sentence-container row">
