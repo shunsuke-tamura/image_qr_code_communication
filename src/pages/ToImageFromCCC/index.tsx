@@ -14,23 +14,18 @@ declare global {
   }
 }
 
+type WordData = {
+  image: string;
+  label: number;
+  word: string | undefined;
+  category: PartCategory | undefined;
+};
+
 const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
-  let tempDataList: {
-    image: string;
-    label: number;
-    word: string | undefined;
-    category: PartCategory | undefined;
-  }[] = [];
-  const [wordImageStrList, setWordImageStrList] = useState<
-    {
-      image: string;
-      label: number;
-      word: string | undefined;
-      category: PartCategory | undefined;
-    }[]
-  >([]);
+  let tempDataList: WordData[] = [];
+  const [wordImageStrList, setWordImageStrList] = useState<WordData[]>([]);
   const [sentenceImageStrList, setSentenceImageStrList] = useState<
     { image: string; sentence: string }[]
   >([]);
