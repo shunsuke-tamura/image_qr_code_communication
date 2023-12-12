@@ -154,7 +154,9 @@ export const subjectList = [
 ];
 
 export const verbList = [
-  "go",
+  // "go",
+  // "is",
+  "get",
   "run",
   "eat",
   "jump",
@@ -371,7 +373,9 @@ export const partPropertyList = [
   },
   {
     range: numRange,
-    list: [...Array(maxNum)].map((_, idx) => (idx + 1).toString(10)),
+    list: [...Array(maxNum)].map((_, idx) =>
+      idx === 0 ? "a" : (idx + 1).toString(10)
+    ),
   },
   {
     range: objectRange,
