@@ -24,7 +24,7 @@ type WordData = {
 const ToImageFromCCCPage = () => {
   const cv = window.cv;
 
-  let tempDataList: WordData[] = [];
+  let totalWordData: WordData[] = [];
   const [wordImageStrList, setWordImageStrList] = useState<WordData[]>([]);
   const [sentenceImageStrList, setSentenceImageStrList] = useState<
     { image: string; sentence: string }[]
@@ -128,7 +128,7 @@ const ToImageFromCCCPage = () => {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cropeWordImage = (srcImage: any): Promise<void> => {
+  const cropeWordImage = (srcImage: any): Promise<WordData[]> => {
     return new Promise((resolve) => {
       const gray = new cv.Mat();
       const binary = new cv.Mat();
@@ -157,6 +157,7 @@ const ToImageFromCCCPage = () => {
       const a = hierarchy.intPtr(0, contours.size() - 1);
       const b = a[3];
       const codeContainerIdx = b;
+      const temp: WordData[] = [];
       for (let i = 0; i < contours.size(); ++i) {
         const color = colors[hierarchy.intPtr(0, i)[3] !== -1 ? 1 : 0];
 
@@ -183,16 +184,7 @@ const ToImageFromCCCPage = () => {
         const croppedCanvas = document.createElement("canvas");
         cv.imshow(croppedCanvas, wordCroped);
         const croppedBinaryImageStr = croppedCanvas.toDataURL("image/png");
-        setWordImageStrList((prev) => [
-          ...prev,
-          {
-            image: croppedBinaryImageStr,
-            label: colorIdx,
-            word: undefined,
-            category: undefined,
-          },
-        ]);
-        tempDataList.push({
+        temp.push({
           image: croppedBinaryImageStr,
           label: colorIdx,
           word: undefined,
@@ -205,12 +197,15 @@ const ToImageFromCCCPage = () => {
       binary.delete();
       contours.delete();
       hierarchy.delete();
-      resolve();
+      resolve(temp);
     });
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cropeSentenceImage = async (srcImage: any) => {
+  const cropeSentenceImage = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    srcImage: any,
+    wordDataList: WordData[]
+  ) => {
     const gray = new cv.Mat();
     const binary = new cv.Mat();
     const dst = cv.Mat.zeros(srcImage.rows, srcImage.cols, cv.CV_8UC3);
@@ -257,14 +252,14 @@ const ToImageFromCCCPage = () => {
       ]);
 
       // set word
-      if (tempDataList.length < 1) {
+      if (wordDataList.length < 1) {
         continue;
       }
-      const wordList = ocrRes.data.text.split(" ");
+      const wordList = ocrRes.data.text.split(" ").reverse();
       for (let j = 0; j < wordList.length; j++) {
-        tempDataList[(sentenceCount - 1) * wordList.length + j].word =
-          wordList[wordList.length - 1 - j];
-        tempDataList[(sentenceCount - 1) * wordList.length + j].category =
+        wordDataList[(sentenceCount - 1) * wordList.length + j].word =
+          wordList[j];
+        wordDataList[(sentenceCount - 1) * wordList.length + j].category =
           j as PartCategory;
       }
     }
@@ -275,11 +270,11 @@ const ToImageFromCCCPage = () => {
     contours.delete();
     hierarchy.delete();
 
-    setWordImageStrList(tempDataList);
+    return wordDataList;
   };
 
   const convertToImage = () => {
-    tempDataList.reverse().map((data) => {
+    totalWordData.map((data) => {
       imageBinaryArray.push(parseInt(data.label.toString(2), 2) as Bit);
       imageBinaryArray.push(convertWordToBinary(data.word!, data.category!));
     });
@@ -292,21 +287,27 @@ const ToImageFromCCCPage = () => {
   const executeHandler = async () => {
     setWordImageStrList([]);
     setSentenceImageStrList([]);
+    totalWordData = [];
+    // images: HTMLImageElement[] = [];
     let src = new cv.Mat();
     for (const srcImage of srcImageList) {
       // const src = cv.imread("input");
-      const img = new Image();
-      img.src = URL.createObjectURL(srcImage);
-      img.onload = async () => {
-        src = cv.imread(img);
-        tempDataList = [];
-        setWordImageStrList([]);
-        setSentenceImageStrList([]);
-        await cropeWordImage(src);
-        await cropeSentenceImage(src);
-        convertToImage();
-      };
+      const p = new Promise<void>((resolve) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(srcImage);
+        img.onload = async () => {
+          src = cv.imread(img);
+          let temp = await cropeWordImage(src);
+          temp = await cropeSentenceImage(src, temp);
+          totalWordData.push(...temp.reverse());
+          resolve();
+        };
+      });
+      await p;
     }
+    console.log(totalWordData.length);
+    setWordImageStrList(totalWordData);
+    convertToImage();
     src.delete();
   };
 
