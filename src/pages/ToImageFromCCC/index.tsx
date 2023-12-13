@@ -111,10 +111,47 @@ const ToImageFromCCCPage = () => {
     return minDiffIndex;
   };
 
-  const convertWordToBinary = (word: string, category: PartCategory): Bit => {
+  const convertWordToIdx = (word: string, category: PartCategory): number => {
+    // 改行を削除
+    word = word.replace(/\r?\n/g, "");
+    word = word.replace("§", "6");
+    word = word.replace("%", "9");
     const wordIdx = partPropertyList[category].list.findIndex(
       (part) => part.toLowerCase() === word.toLowerCase()
     );
+    if (wordIdx !== -1) {
+      return wordIdx;
+    }
+
+    console.log(word, category, wordIdx);
+    const diffList = partPropertyList[category].list.map((part) => {
+      const longWord =
+        part.length > word.length ? part.split("") : word.split("");
+      const shortWord =
+        part.length > word.length ? word.split("") : part.split("");
+      if (longWord.length - shortWord.length > 1) {
+        return 100;
+      }
+      const temp = [];
+      for (let i = 0; i <= longWord.length - shortWord.length; i++) {
+        let diffCount = longWord.length - shortWord.length;
+        for (let j = 0; j < shortWord.length; j++) {
+          if (shortWord[j].toLowerCase() !== longWord[j + i].toLowerCase()) {
+            diffCount++;
+          }
+        }
+        temp.push(diffCount);
+      }
+      return Math.min(...temp);
+    });
+    console.log(
+      word,
+      diffList,
+      partPropertyList[category].list[diffList.indexOf(Math.min(...diffList))]
+    );
+    return diffList.indexOf(Math.min(...diffList));
+  };
+
   const decimalToBitArray = (decimal: number, length: number): Bit[] => {
     const bits = decimal
       .toString(2)
