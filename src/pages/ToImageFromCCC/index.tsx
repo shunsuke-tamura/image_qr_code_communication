@@ -272,7 +272,7 @@ const ToImageFromCCCPage = () => {
         wordDataList[(sentenceCount - 1) * wordList.length + j].word =
           wordList[j];
         wordDataList[(sentenceCount - 1) * wordList.length + j].category =
-          j as PartCategory;
+          (wordList.length - 1 - j) as PartCategory;
       }
     }
     cv.imshow("resultS", dst);
