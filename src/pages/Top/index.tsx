@@ -22,6 +22,10 @@ const TopPage = () => {
       >
         to-image-from-ccc
       </button>
+      <br />
+      <button className="primary" onClick={() => navigate("/color-list")}>
+        color-list
+      </button>
     </div>
   );
 };
