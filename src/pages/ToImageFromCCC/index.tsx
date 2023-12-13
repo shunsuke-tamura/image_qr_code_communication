@@ -115,7 +115,15 @@ const ToImageFromCCCPage = () => {
     const wordIdx = partPropertyList[category].list.findIndex(
       (part) => part.toLowerCase() === word.toLowerCase()
     );
-    return parseInt(wordIdx.toString(2), 2) as Bit;
+  const decimalToBitArray = (decimal: number, length: number): Bit[] => {
+    const bits = decimal
+      .toString(2)
+      .split("")
+      .map((bit) => (bit === "0" ? 0 : 1));
+    while (bits.length < length) {
+      bits.unshift(0);
+    }
+    return bits;
   };
 
   function bitArrayToUint8Array(bitArray: Bit[]) {
@@ -281,8 +289,14 @@ const ToImageFromCCCPage = () => {
 
   const convertToImage = () => {
     totalWordData.map((data) => {
-      imageBinaryArray.push(parseInt(data.label.toString(2), 2) as Bit);
-      imageBinaryArray.push(convertWordToBinary(data.word!, data.category!));
+      imageBinaryArray.push(...decimalToBitArray(data.label, colorRange));
+      const wordIdx = convertWordToIdx(data.word!, data.category!);
+      imageBinaryArray.push(
+        ...decimalToBitArray(wordIdx, partPropertyList[data.category!].range)
+      );
+      imageBinaryArray.push();
+    });
+    console.log(imageBinaryArray);
     });
     const uint8Array = bitArrayToUint8Array(imageBinaryArray);
     const blob = new Blob([uint8Array], { type: "image/png" });
