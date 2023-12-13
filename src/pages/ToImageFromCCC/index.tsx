@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bgColorList, partPropertyList } from "../../constants";
+import { bgColorList, colorRange, partPropertyList } from "../../constants";
 
 import { createWorker } from "tesseract.js";
 import { splitArray } from "../../common";
@@ -21,7 +21,7 @@ type WordData = {
   category: PartCategory | undefined;
 };
 
-const ToImageFromCCCPage = () => {
+const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
   const cv = window.cv;
 
   let totalWordData: WordData[] = [];
@@ -334,6 +334,10 @@ const ToImageFromCCCPage = () => {
       imageBinaryArray.push();
     });
     console.log(imageBinaryArray);
+    srcData!.map((bit, idx) => {
+      if (bit !== imageBinaryArray[idx]) {
+        console.log(idx, bit, imageBinaryArray[idx]);
+      }
     });
     const uint8Array = bitArrayToUint8Array(imageBinaryArray);
     const blob = new Blob([uint8Array], { type: "image/png" });
@@ -405,10 +409,11 @@ const ToImageFromCCCPage = () => {
         <div>
           {splitArray(wordImageStrList, 4).map((wordImageStrList, idx1) => (
             <div style={{ display: "flex" }} key={`row${idx1}`}>
+              <a>{idx1}</a>
               {wordImageStrList.map((wordImageStr, idx2) => (
                 <div key={`word${idx1}-${idx2}`}>
                   <a>
-                    {wordImageStr.label}, {wordImageStr.word}
+                    {idx1 * 4 + idx2}, {wordImageStr.label}, {wordImageStr.word}
                   </a>
                   <img style={{ margin: "2px" }} src={wordImageStr.image} />
                 </div>
@@ -437,7 +442,9 @@ const ToImageFromCCCPage = () => {
           <div>sentences</div>
           {sentenceImageStrList.map((sentence, idx) => (
             <div key={`sentence${idx}`}>
-              <a>{sentence.sentence}</a>
+              <a>
+                {idx}, {sentence.sentence}
+              </a>
               <img src={sentence.image} />
             </div>
           ))}

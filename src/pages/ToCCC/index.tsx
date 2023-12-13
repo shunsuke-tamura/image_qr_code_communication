@@ -8,6 +8,7 @@ import {
 } from "../../constants";
 import { useState } from "react";
 import { splitArray } from "../../common";
+import ToImageFromCCC from "../ToImageFromCCC";
 
 // 背景色から文字色を決定する関数
 // input: ex. "#ffffff"
@@ -30,6 +31,7 @@ export type Bit = 0 | 1;
 const ToCCCPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [cccContainer, setCccContainer] = useState<JSX.Element | null>(null);
+  const [binary, setBinary] = useState<Bit[]>([]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -146,19 +148,25 @@ const ToCCCPage = () => {
     }
     const binaryArray = await convertImageToBitArray(imageFile);
     const cccContainer = convertStringToCCC(binaryArray);
+    setBinary(binaryArray);
     return cccContainer;
   };
 
   return (
-    <div className="bg">
-      <h1>ToCCCPage</h1>
-      <input type="file" accept="image/*" onChange={handleImageChange} />
+    <>
+      <div className="bg">
+        <h1>ToCCCPage</h1>
+        <input type="file" accept="image/*" onChange={handleImageChange} />
+        <br />
+        <button className="primary" onClick={executeHandler}>
+          Try it
+        </button>
+        {cccContainer}
+      </div>
       <br />
-      <button className="primary" onClick={executeHandler}>
-        Try it
-      </button>
-      {cccContainer}
-    </div>
+      <br />
+      <ToImageFromCCC srcData={binary}></ToImageFromCCC>
+    </>
   );
 };
 
