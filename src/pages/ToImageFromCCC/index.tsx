@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { bgColorList, colorRange, partPropertyList } from "../../constants";
+
+import Webcam from "react-webcam";
 
 import { createWorker } from "tesseract.js";
 import { splitArray } from "../../common";
@@ -36,6 +38,22 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
   >(undefined);
   const [show, setShow] = useState<boolean>(false);
   const [showS, setShowS] = useState<boolean>(false);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
+  const webcamRef = useRef<Webcam>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        const cameras = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+        setCameraList(cameras);
+        setSelectedCameraId(cameras[0].deviceId);
+      })
+      .catch((err) => console.log(err.name + ": " + err.message));
+  }, []);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -375,6 +393,24 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
   return (
     <div>
       <h1>to-image-from-ccc</h1>
+
+      <Webcam
+        audio={false}
+        ref={webcamRef}
+        videoConstraints={{ deviceId: selectedCameraId }}
+      ></Webcam>
+      <br />
+      <select
+        value={selectedCameraId}
+        onChange={(e) => setSelectedCameraId(e.target.value)}
+      >
+        {cameraList.map((camera) => (
+          <option value={camera.deviceId} key={camera.deviceId}>
+            {camera.label}
+          </option>
+        ))}
+      </select>
+      <br />
 
       <div>
         <input type="file" onChange={onChangeFile} multiple />
