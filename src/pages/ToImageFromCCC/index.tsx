@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bgColorList, colorRange, partPropertyList } from "../../constants";
 
 import Webcam from "react-webcam";
@@ -38,9 +38,12 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
   >(undefined);
   const [show, setShow] = useState<boolean>(false);
   const [showS, setShowS] = useState<boolean>(false);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [capturing, setCapturing] = useState(false);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
   const webcamRef = useRef<Webcam>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -54,6 +57,40 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
       })
       .catch((err) => console.log(err.name + ": " + err.message));
   }, []);
+
+  const handleDataAvailable = useCallback(
+    ({ data }: BlobEvent) => {
+      if (data.size > 0) {
+        setRecordedChunks((prev) => [...prev, data]);
+      }
+    },
+    [setRecordedChunks]
+  );
+
+  const handleStartCaptureClick = useCallback(() => {
+    if (webcamRef.current === null || webcamRef.current.stream === null) return;
+    try {
+      mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
+        mimeType: MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4",
+      });
+      mediaRecorderRef.current.addEventListener(
+        "dataavailable",
+        handleDataAvailable
+      );
+      mediaRecorderRef.current.start();
+      setCapturing(true);
+    } catch (e) {
+      console.log(e);
+    }
+  }, [webcamRef, setCapturing, mediaRecorderRef, handleDataAvailable]);
+
+  const handleStopCaptureClick = useCallback(() => {
+    if (mediaRecorderRef.current === null) return;
+    mediaRecorderRef.current.stop();
+    setCapturing(false);
+  }, [mediaRecorderRef]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -411,6 +448,15 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
         ))}
       </select>
       <br />
+      {capturing ? (
+        <button onClick={handleStopCaptureClick} className="secondary">
+          Stop
+        </button>
+      ) : (
+        <button onClick={handleStartCaptureClick} className="primary">
+          Start
+        </button>
+      )}
 
       <div>
         <input type="file" onChange={onChangeFile} multiple />
