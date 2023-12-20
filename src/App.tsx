@@ -6,6 +6,7 @@ import TopPage from "./pages/Top";
 import ToCCCPage from "./pages/ToCCC";
 import ToImageFromCCC from "./pages/ToImageFromCCC";
 import ColorListPage from "./pages/ColorList";
+import ToCQrPage from "./pages/ToCQr";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/to-ccc" element={<ToCCCPage />} />
         <Route path="/to-image-from-ccc" element={<ToImageFromCCC />} />
         <Route path="/color-list" element={<ColorListPage />} />
+        <Route path="/to-cqr" element={<ToCQrPage />} />
       </Routes>
     </div>
   );

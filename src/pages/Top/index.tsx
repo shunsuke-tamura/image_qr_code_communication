@@ -23,6 +23,16 @@ const TopPage = () => {
         to-image-from-ccc
       </button>
       <br />
+      <button className="primary" onClick={() => navigate("/to-cqr")}>
+        to-cqr
+      </button>
+      <button
+        className="secondary"
+        onClick={() => navigate("/to-image-from-cqr")}
+      >
+        to-image-from-cqr
+      </button>
+      <br />
       <button className="primary" onClick={() => navigate("/color-list")}>
         color-list
       </button>
