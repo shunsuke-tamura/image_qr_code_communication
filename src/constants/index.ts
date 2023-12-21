@@ -387,3 +387,15 @@ export const partCategory = {
   number: 2,
   object: 3,
 };
+
+export const cQrCellColorList = [
+  "#777777",
+  "#0000ff",
+  "#00ff00",
+  "#00ffff",
+  "#ff0000",
+  "#ff00ff",
+  "#ffff00",
+  "#ffffff",
+];
+export const cQrCellColorRange = Math.log2(cQrCellColorList.length);
