@@ -4,6 +4,7 @@ import { Bit } from "../../types";
 import { cQrCellColorList, cQrCellColorRange } from "../../constants";
 
 import "./style.css";
+import FromCQr from "../fromCQr";
 
 const ToCQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -79,6 +80,9 @@ const ToCQrPage = () => {
         </button>
         {cQrContainer}
       </div>
+      <br />
+      <br />
+      <FromCQr srcData={binary}></FromCQr>
     </>
   );
 };
