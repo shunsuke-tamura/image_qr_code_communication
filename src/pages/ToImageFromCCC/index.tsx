@@ -5,8 +5,7 @@ import Webcam from "react-webcam";
 
 import { createWorker } from "tesseract.js";
 import { splitArray } from "../../common";
-import { Bit } from "../ToCCC";
-import { PartCategory } from "../../types";
+import { Bit, PartCategory } from "../../types";
 const tesseractWorker = await createWorker("eng");
 
 declare global {
