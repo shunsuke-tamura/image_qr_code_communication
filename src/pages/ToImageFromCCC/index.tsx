@@ -4,7 +4,11 @@ import { bgColorList, colorRange, partPropertyList } from "../../constants";
 import Webcam from "react-webcam";
 
 import { createWorker } from "tesseract.js";
-import { splitArray } from "../../common";
+import {
+  bitArrayToUint8Array,
+  decimalToBitArray,
+  splitArray,
+} from "../../common";
 import { Bit, PartCategory } from "../../types";
 const tesseractWorker = await createWorker("eng");
 
@@ -205,26 +209,6 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
     );
     return diffList.indexOf(Math.min(...diffList));
   };
-
-  const decimalToBitArray = (decimal: number, length: number): Bit[] => {
-    const bits = decimal
-      .toString(2)
-      .split("")
-      .map((bit) => (bit === "0" ? 0 : 1));
-    while (bits.length < length) {
-      bits.unshift(0);
-    }
-    return bits;
-  };
-
-  function bitArrayToUint8Array(bitArray: Bit[]) {
-    const bytes = [];
-    for (let i = 0; i < bitArray.length; i += 8) {
-      const byte = bitArray.slice(i, i + 8).join("");
-      bytes.push(parseInt(byte, 2));
-    }
-    return new Uint8Array(bytes);
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cropeWordImage = (srcImage: any): Promise<WordData[]> => {

@@ -14,6 +14,15 @@ export const splitArray = <T>(
   return result;
 };
 
+export const bitArrayToUint8Array = (bitArray: Bit[]) => {
+  const bytes = [];
+  for (let i = 0; i < bitArray.length; i += 8) {
+    const byte = bitArray.slice(i, i + 8).join("");
+    bytes.push(parseInt(byte, 2));
+  }
+  return new Uint8Array(bytes);
+};
+
 const uint8ArrayToBitArray = (uint8Array: Uint8Array) => {
   const bitArray: Bit[] = [];
 
@@ -42,4 +51,16 @@ export const convertImageToBitArray = (file: File): Promise<Bit[]> => {
     };
     reader.onerror = (error) => reject(error);
   });
+};
+
+// 10進数を2進数の配列に変換する
+export const decimalToBitArray = (decimal: number, length: number): Bit[] => {
+  const bits = decimal
+    .toString(2)
+    .split("")
+    .map((bit) => (bit === "0" ? 0 : 1));
+  while (bits.length < length) {
+    bits.unshift(0);
+  }
+  return bits;
 };
