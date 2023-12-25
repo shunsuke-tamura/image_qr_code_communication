@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Webcam from "react-webcam";
 import { Bit } from "../../types";
 import { cQrCellColorList, cQrCellColorRange } from "../../constants";
 import {
@@ -23,6 +24,59 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
     string | undefined
   >(undefined);
   const [show, setShow] = useState<boolean>(false);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [capturing, setCapturing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const webcamRef = useRef<Webcam>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        const cameras = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+        setCameraList(cameras);
+        setSelectedCameraId(cameras[0].deviceId);
+      })
+      .catch((err) => console.log(err.name + ": " + err.message));
+  }, []);
+
+  const handleDataAvailable = useCallback(
+    ({ data }: BlobEvent) => {
+      if (data.size > 0) {
+        setRecordedChunks((prev) => [...prev, data]);
+      }
+    },
+    [setRecordedChunks]
+  );
+
+  const handleStartCaptureClick = useCallback(() => {
+    if (webcamRef.current === null || webcamRef.current.stream === null) return;
+    try {
+      mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
+        mimeType: MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4",
+      });
+      mediaRecorderRef.current.addEventListener(
+        "dataavailable",
+        handleDataAvailable
+      );
+      mediaRecorderRef.current.start();
+      setCapturing(true);
+    } catch (e) {
+      console.log(e);
+    }
+  }, [webcamRef, setCapturing, mediaRecorderRef, handleDataAvailable]);
+
+  const handleStopCaptureClick = useCallback(() => {
+    if (mediaRecorderRef.current === null) return;
+    mediaRecorderRef.current.stop();
+    setCapturing(false);
+  }, [mediaRecorderRef]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -196,6 +250,32 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
   return (
     <div>
       <h1>From CQR Page</h1>
+      <Webcam
+        audio={false}
+        ref={webcamRef}
+        videoConstraints={{ deviceId: selectedCameraId }}
+      ></Webcam>
+      <br />
+      <select
+        value={selectedCameraId}
+        onChange={(e) => setSelectedCameraId(e.target.value)}
+      >
+        {cameraList.map((camera) => (
+          <option value={camera.deviceId} key={camera.deviceId}>
+            {camera.label}
+          </option>
+        ))}
+      </select>
+      <br />
+      {capturing ? (
+        <button onClick={handleStopCaptureClick} className="secondary">
+          Stop
+        </button>
+      ) : (
+        <button onClick={handleStartCaptureClick} className="primary">
+          Start
+        </button>
+      )}
 
       <div>
         <input type="file" onChange={onChangeFile} multiple />
