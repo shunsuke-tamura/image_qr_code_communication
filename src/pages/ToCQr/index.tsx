@@ -59,7 +59,7 @@ const ToCQrPage = () => {
   };
 
   const startShowingCQrCode = (cQrCodeNum: number) => {
-    console.log("start showing qr code");
+    console.log("start showing CQR code");
 
     const longInterval = 1000;
     const shortInterval = 100;
@@ -78,7 +78,7 @@ const ToCQrPage = () => {
 
   useEffect(() => {
     return () => {
-      console.log("stop showing qr code");
+      console.log("stop showing CQR code");
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
