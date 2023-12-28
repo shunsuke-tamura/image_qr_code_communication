@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { convertImageToBitArray, splitArray } from "../../common";
+import {
+  convertImageToBitArray,
+  decimalToBitArray,
+  splitArray,
+} from "../../common";
 import { Bit } from "../../types";
 import { cQrCellColorList, cQrCellColorRange } from "../../constants";
 
@@ -36,25 +40,43 @@ const ToCQrPage = () => {
       parseInt(cQrCellBinary.join(""), 2)
     );
 
-    return splitArray(cQrCellColorIndexList, 6400).map(
-      (oneCQrCellColorIndexList) => (
-        <div className="cqr-container" style={{ marginTop: "15px" }}>
-          {splitArray(oneCQrCellColorIndexList, 80).map(
-            (cQrRowCellColorIndexList) => (
-              <div className="cqr-row">
-                {cQrRowCellColorIndexList.map((cellColorIndex) => (
-                  <div
-                    className="cqr-cell"
-                    style={{
-                      backgroundColor: cQrCellColorList[cellColorIndex],
-                    }}
-                  />
-                ))}
-              </div>
-            )
-          )}
-        </div>
-      )
+    const ONE_CQR_CODE_NUM = 6400;
+    const CQR_ROW_NUM = 80;
+    return splitArray(cQrCellColorIndexList, ONE_CQR_CODE_NUM).map(
+      (oneCQrCellColorIndexList, idx) => {
+        const idxCells = splitArray(
+          decimalToBitArray(idx, cQrCellColorRange),
+          cQrCellColorRange,
+          adjustment
+        );
+        const idxCellColorIndexList = idxCells.map((idxCell) =>
+          parseInt(idxCell.join(""), 2)
+        );
+        const metaRows = splitArray(idxCellColorIndexList, CQR_ROW_NUM, (r) => {
+          while (r[r.length - 1].length < CQR_ROW_NUM) {
+            r[r.length - 1].push(0);
+          }
+        });
+        oneCQrCellColorIndexList.unshift(...metaRows.flat());
+        return (
+          <div className="cqr-container" style={{ marginTop: "15px" }}>
+            {splitArray(oneCQrCellColorIndexList, 80).map(
+              (cQrRowCellColorIndexList) => (
+                <div className="cqr-row">
+                  {cQrRowCellColorIndexList.map((cellColorIndex) => (
+                    <div
+                      className="cqr-cell"
+                      style={{
+                        backgroundColor: cQrCellColorList[cellColorIndex],
+                      }}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        );
+      }
     );
   };
 
