@@ -168,7 +168,7 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
         new cv.Scalar(255, 255, 255, 255),
       ];
       let contourIdx = 0;
-      const temp: CellData[] = [];
+      const cellDatas: CellData[] = [];
       while (hierarchy.intPtr(0, contourIdx)[0] !== -1) {
         const color = colors[hierarchy.intPtr(0, contourIdx)[3] !== -1 ? 1 : 0];
         cv.drawContours(
@@ -190,7 +190,7 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
         const croppedCanvas = document.createElement("canvas");
         cv.imshow(croppedCanvas, cellCroped);
         const croppedImageStr = croppedCanvas.toDataURL("image/png");
-        temp.push({
+        cellDatas.push({
           image: croppedImageStr,
           colorIdx,
         });
@@ -203,7 +203,7 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
       binary.delete();
       contours.delete();
       hierarchy.delete();
-      resolve(temp);
+      resolve(cellDatas);
     });
   };
 

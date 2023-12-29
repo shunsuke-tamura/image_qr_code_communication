@@ -127,7 +127,12 @@ const ToCQrPage = () => {
         <button className="primary" onClick={executeHandler}>
           Try it
         </button>
-        {cQrContainerList[showingCQrContainerIndex]}
+        {/* {cQrContainerList[showingCQrContainerIndex]} */}
+        {cQrContainerList.map((cQrContainer) => (
+          <div className="cqr-container" style={{ marginTop: "15px" }}>
+            {cQrContainer}
+          </div>
+        ))}
       </div>
       <br />
       <br />
