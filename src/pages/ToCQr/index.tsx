@@ -54,7 +54,7 @@ const ToCQrPage = () => {
         );
         const metaRows = splitArray(idxCellColorIndexList, CQR_ROW_NUM, (r) => {
           while (r[r.length - 1].length < CQR_ROW_NUM) {
-            r[r.length - 1].push(0);
+            r[r.length - 1].unshift(0);
           }
         });
         oneCQrCellColorIndexList.unshift(...metaRows.flat());
