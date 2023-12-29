@@ -5,7 +5,11 @@ import {
   splitArray,
 } from "../../common";
 import { Bit } from "../../types";
-import { cQrCellColorList, cQrCellColorRange } from "../../constants";
+import {
+  CQR_ROW_NUM,
+  cQrCellColorList,
+  cQrCellColorRange,
+} from "../../constants";
 
 import "./style.css";
 import FromCQr from "../fromCQr";
@@ -41,7 +45,6 @@ const ToCQrPage = () => {
     );
 
     const ONE_CQR_CODE_NUM = 6400;
-    const CQR_ROW_NUM = 80;
     return splitArray(cQrCellColorIndexList, ONE_CQR_CODE_NUM).map(
       (oneCQrCellColorIndexList, idx) => {
         const idxCells = splitArray(

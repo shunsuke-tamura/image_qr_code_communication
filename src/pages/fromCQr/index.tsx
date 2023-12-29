@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { Bit } from "../../types";
-import { cQrCellColorList, cQrCellColorRange } from "../../constants";
+import {
+  CQR_ROW_NUM,
+  cQrCellColorList,
+  cQrCellColorRange,
+} from "../../constants";
 import {
   bitArrayToUint8Array,
   decimalToBitArray,
@@ -207,7 +211,8 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
     });
   };
 
-  const convertToImage = (totalCellData: CellData[]) => {
+  const convertToImage = (decodedCQrDataList: CellData[][]) => {
+    const totalCellData = decodedCQrDataList.flat();
     totalCellData.forEach((data) => {
       convertedImageBinary.push(
         ...decimalToBitArray(data.colorIdx, cQrCellColorRange)
@@ -227,7 +232,7 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
 
   const executeHandler = async () => {
     setCellImageColorIdxList([]);
-    const totalCellData: CellData[] = [];
+    const decodedCQrDataList: CellData[][] = [];
     let src = new cv.Mat();
     for (const srcImage of srcImageList) {
       const p = new Promise<void>((resolve) => {
@@ -235,15 +240,28 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
         img.src = URL.createObjectURL(srcImage);
         img.onload = async () => {
           src = cv.imread(img);
-          totalCellData.push(...(await cropeCellImage(src)).reverse());
+          const decodedCQrData = (await cropeCellImage(src)).reverse();
+          const cQrPrefix = parseInt(
+            decodedCQrData
+              .slice(0, CQR_ROW_NUM)
+              .map((d) =>
+                decimalToBitArray(d.colorIdx, cQrCellColorRange).join("")
+              )
+              .join(""),
+            2
+          );
+          if (decodedCQrDataList.length < cQrPrefix + 1) {
+            decodedCQrDataList.push([]);
+          }
+          decodedCQrDataList[cQrPrefix] = decodedCQrData.slice(CQR_ROW_NUM);
           resolve();
         };
       });
       await p;
     }
-    console.log(totalCellData.length);
-    setCellImageColorIdxList(totalCellData);
-    convertToImage(totalCellData);
+    console.log(decodedCQrDataList.flat().length);
+    setCellImageColorIdxList(decodedCQrDataList.flat());
+    convertToImage(decodedCQrDataList);
     src.delete();
   };
 

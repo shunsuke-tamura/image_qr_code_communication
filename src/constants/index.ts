@@ -399,3 +399,5 @@ export const cQrCellColorList = [
   "#ffffff",
 ];
 export const cQrCellColorRange = Math.log2(cQrCellColorList.length);
+
+export const CQR_ROW_NUM = 80;
