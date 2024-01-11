@@ -27,6 +27,11 @@ const ToCQrPage = () => {
   const [startQRStringData, setStartQRStringData] = useState<string>("");
   const startQRData = new StartQRData();
 
+  const CQR_CELL_STYLE = {
+    borderWidth: 2,
+    width: 5,
+  };
+
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -69,7 +74,14 @@ const ToCQrPage = () => {
         });
         oneCQrCellColorIndexList.unshift(...metaRows.flat());
         return (
-          <div className="cqr-container" style={{ marginTop: "15px" }}>
+          <div
+            className="cqr-container"
+            style={{
+              padding: `${
+                (CQR_CELL_STYLE.borderWidth * 2 + CQR_CELL_STYLE.width) * 2
+              }px`,
+            }}
+          >
             {splitArray(oneCQrCellColorIndexList, CQR_ROW_NUM).map(
               (cQrRowCellColorIndexList) => (
                 <div className="cqr-row">
@@ -77,6 +89,9 @@ const ToCQrPage = () => {
                     <div
                       className="cqr-cell"
                       style={{
+                        border: `${CQR_CELL_STYLE.borderWidth}px solid rgb(0, 0, 0)`,
+                        width: `${CQR_CELL_STYLE.width}px`,
+                        height: `${CQR_CELL_STYLE.width}px`,
                         backgroundColor: cQrCellColorList[cellColorIndex],
                       }}
                     />
@@ -140,26 +155,36 @@ const ToCQrPage = () => {
         <button className="primary" onClick={executeHandler}>
           Try it
         </button>
-        {startQRStringData !== "" ? (
-          showingCQrContainerIndex === 0 ? (
-            <div
-              style={{
-                padding: "15px",
-                backgroundColor: "white",
-                border: "white solid 1px",
-              }}
-            >
-              <QRCodeSVG value={startQRStringData} />
-            </div>
-          ) : (
-            cQrContainerList[showingCQrContainerIndex]
-          )
-        ) : null}
-        {/* {cQrContainerList.map((cQrContainer) => (
-          <div className="cqr-container" style={{ marginTop: "15px" }}>
-            {cQrContainer}
-          </div>
-        ))} */}
+        <div
+          style={{
+            padding: "15px",
+            backgroundColor: "white",
+          }}
+        >
+          {startQRStringData !== "" ? (
+            showingCQrContainerIndex === 0 ? (
+              <QRCodeSVG
+                value={startQRStringData}
+                size={
+                  (CQR_CELL_STYLE.borderWidth * 2 + CQR_CELL_STYLE.width) *
+                  (CQR_ROW_NUM + 2 * 2)
+                }
+              />
+            ) : (
+              cQrContainerList[showingCQrContainerIndex]
+            )
+          ) : null}
+          {/* {startQRStringData !== "" ? (
+            <QRCodeSVG
+              value={startQRStringData}
+              size={
+                (CQR_CELL_STYLE.borderWidth * 2 + CQR_CELL_STYLE.width) *
+                (CQR_ROW_NUM + 2 * 2)
+              }
+            />
+          ) : null}
+          {cQrContainerList.map((cQrContainer) => cQrContainer)} */}
+        </div>
       </div>
       <br />
       <br />
