@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   convertImageToBitArray,
   decimalToBitArray,
@@ -7,12 +8,15 @@ import {
 import { Bit } from "../../types";
 import {
   CQR_ROW_NUM,
+  LONG_INTERVAL,
+  SHORT_INTERVAL,
   cQrCellColorList,
   cQrCellColorRange,
 } from "../../constants";
 
 import "./style.css";
 import FromCQr from "../fromCQr";
+import { StartQRData } from "../../types/StartQRData";
 
 const ToCQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -20,6 +24,8 @@ const ToCQrPage = () => {
   const [showingCQrContainerIndex, setShowingCQrContainerIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [binary, setBinary] = useState<Bit[]>([]);
+  const [startQRStringData, setStartQRStringData] = useState<string>("");
+  const startQRData = new StartQRData();
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,7 +50,8 @@ const ToCQrPage = () => {
       parseInt(cQrCellBinary.join(""), 2)
     );
 
-    const ONE_CQR_CODE_NUM = 6400;
+    const ONE_CQR_CODE_NUM = CQR_ROW_NUM ** 2;
+    startQRData.metaCellCount = CQR_ROW_NUM;
     return splitArray(cQrCellColorIndexList, ONE_CQR_CODE_NUM).map(
       (oneCQrCellColorIndexList, idx) => {
         const idxCells = splitArray(
@@ -63,7 +70,7 @@ const ToCQrPage = () => {
         oneCQrCellColorIndexList.unshift(...metaRows.flat());
         return (
           <div className="cqr-container" style={{ marginTop: "15px" }}>
-            {splitArray(oneCQrCellColorIndexList, 80).map(
+            {splitArray(oneCQrCellColorIndexList, CQR_ROW_NUM).map(
               (cQrRowCellColorIndexList) => (
                 <div className="cqr-row">
                   {cQrRowCellColorIndexList.map((cellColorIndex) => (
@@ -86,16 +93,12 @@ const ToCQrPage = () => {
   const startShowingCQrCode = (cQrCodeNum: number) => {
     console.log("start showing CQR code");
 
-    const longInterval = 1000;
-    const shortInterval = 100;
     const cQrHandler = (showIndex: number) => {
       console.log(showIndex);
       setShowingCQrContainerIndex(showIndex);
       timerRef.current = setTimeout(
         () => cQrHandler((showIndex + 1) % cQrCodeNum),
-        showIndex === 0 || showIndex === cQrCodeNum - 1
-          ? longInterval
-          : shortInterval
+        showIndex === 0 ? LONG_INTERVAL : SHORT_INTERVAL
       );
     };
     cQrHandler(0);
@@ -116,7 +119,14 @@ const ToCQrPage = () => {
     }
     const binaryArray = await convertImageToBitArray(imageFile);
     const cQrContainerList = convertCQrFromImage(binaryArray);
+    startQRData.totalCQRCount = cQrContainerList.length;
+    startQRData.cellCountOnOneSide = CQR_ROW_NUM;
+    startQRData.totalShowingTime =
+      LONG_INTERVAL + SHORT_INTERVAL * cQrContainerList.length;
+    startQRData.oneCQRShowingTime = SHORT_INTERVAL;
+
     setCQrContainerList(cQrContainerList);
+    setStartQRStringData(startQRData.toString());
     startShowingCQrCode(cQrContainerList.length);
     setBinary(binaryArray);
   };
@@ -130,12 +140,26 @@ const ToCQrPage = () => {
         <button className="primary" onClick={executeHandler}>
           Try it
         </button>
-        {/* {cQrContainerList[showingCQrContainerIndex]} */}
-        {cQrContainerList.map((cQrContainer) => (
+        {startQRStringData !== "" ? (
+          showingCQrContainerIndex === 0 ? (
+            <div
+              style={{
+                padding: "15px",
+                backgroundColor: "white",
+                border: "white solid 1px",
+              }}
+            >
+              <QRCodeSVG value={startQRStringData} />
+            </div>
+          ) : (
+            cQrContainerList[showingCQrContainerIndex]
+          )
+        ) : null}
+        {/* {cQrContainerList.map((cQrContainer) => (
           <div className="cqr-container" style={{ marginTop: "15px" }}>
             {cQrContainer}
           </div>
-        ))}
+        ))} */}
       </div>
       <br />
       <br />
