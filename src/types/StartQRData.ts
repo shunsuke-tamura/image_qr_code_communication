@@ -4,14 +4,14 @@ export class StartQRData {
     this.cellCountOnOneSide = 0;
     this.metaCellCount = 0;
     this.totalShowingTime = 0; // in ms
-    this.OneCQRShowingTime = 0; // in ms
+    this.oneCQRShowingTime = 0; // in ms
   }
 
   totalCQRCount: number;
   cellCountOnOneSide: number;
   metaCellCount: number;
   totalShowingTime: number; // in ms
-  OneCQRShowingTime: number; // in ms
+  oneCQRShowingTime: number; // in ms
 
   // Returns a string with each value in order, delimited by ","
   toString() {
@@ -20,7 +20,7 @@ export class StartQRData {
       this.cellCountOnOneSide,
       this.metaCellCount,
       this.totalShowingTime,
-      this.OneCQRShowingTime,
+      this.oneCQRShowingTime,
     ].join(",");
   }
 
@@ -30,6 +30,6 @@ export class StartQRData {
     this.cellCountOnOneSide = parseInt(values[1]);
     this.metaCellCount = parseInt(values[2]);
     this.totalShowingTime = parseInt(values[3]);
-    this.OneCQRShowingTime = parseInt(values[4]);
+    this.oneCQRShowingTime = parseInt(values[4]);
   }
 }
