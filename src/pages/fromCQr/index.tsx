@@ -11,8 +11,11 @@ import {
   decimalToBitArray,
   splitArray,
 } from "../../common";
+import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
+import { IScannerControls } from "@zxing/browser";
+import { StartQRData } from "../../types/StartQRData";
 
-const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
+const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   const cv = window.cv;
 
   type CellData = {
@@ -34,6 +37,7 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
   const [capturing, setCapturing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const webcamRef = useRef<Webcam>(null);
+  const codeReaderContlolsRef = useRef<null | IScannerControls>(null);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -81,6 +85,31 @@ const FromCQrPage = ({ srcData }: { srcData: Bit[] }) => {
     mediaRecorderRef.current.stop();
     setCapturing(false);
   }, [mediaRecorderRef]);
+
+  useEffect(() => {
+    if (webcamRef.current === null) return;
+    const codeReader = new BrowserQRCodeReader();
+    codeReader.decodeFromVideoDevice(
+      undefined,
+      webcamRef.current.video as HTMLVideoElement,
+      (result, _err, controls) => {
+        if (result) {
+          if (result.getText() !== "") {
+            const startMetaData = new StartQRData();
+            startMetaData.fromString(result.getText());
+            console.log(startMetaData);
+          }
+        }
+        codeReaderContlolsRef.current = controls;
+      }
+    );
+    return () => {
+      if (codeReaderContlolsRef.current) {
+        codeReaderContlolsRef.current.stop();
+        codeReaderContlolsRef.current = null;
+      }
+    };
+  }, [handleStartCaptureClick, handleStopCaptureClick]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
