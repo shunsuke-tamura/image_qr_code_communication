@@ -44,6 +44,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
   const [capturing, setCapturing] = useState(false);
+  const captured = useRef<boolean>(false);
   const capturedImageStrList: string[] = useMemo(() => [], []);
   const webcamRef = useRef<Webcam>(null);
   const codeReaderContlolsRef = useRef<null | IScannerControls>(null);
@@ -79,30 +80,35 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
 
   const capture = useCallback(() => {
     if (webcamRef.current === null) return;
-    const imageStr = webcamRef.current.getScreenshot();
+    const imageStr = webcamRef.current.getScreenshot({
+      width: selectedCameraInfo.width,
+      height: selectedCameraInfo.height,
+    });
     return imageStr;
-  }, [webcamRef]);
+  }, [webcamRef, selectedCameraInfo]);
 
-  const startCapture = useCallback(
-    async (startMetaData: StartQRData) => {
-      let totalTime = 0;
-      while (totalTime < startMetaData.totalShowingTime) {
-        const imageStr = capture();
-        if (imageStr) {
-          capturedImageStrList.push(imageStr);
-        }
-        totalTime += startMetaData.oneCQRShowingTime / 2;
-        // wait time
-        await new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(null);
-          }, startMetaData.oneCQRShowingTime / 2);
-        });
+  const startCapture = async (startMetaData: StartQRData) => {
+    if (captured.current || capturing) return;
+    console.log("captureStart");
+    captured.current = true;
+    setCapturing(true);
+    console.log(startMetaData);
+    let totalTime = 0;
+    while (totalTime < startMetaData.totalShowingTime) {
+      const imageStr = capture();
+      if (imageStr) {
+        capturedImageStrList.push(imageStr);
       }
-      setCapturing(false);
-    },
-    [capture, capturedImageStrList]
-  );
+      totalTime += startMetaData.oneCQRShowingTime / 2;
+      // wait time
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(null);
+        }, startMetaData.oneCQRShowingTime / 2);
+      });
+    }
+    setCapturing(false);
+  };
 
   useEffect(() => {
     if (webcamRef.current === null) return;
@@ -115,10 +121,8 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
           if (result.getText() !== "") {
             const startMetaData = new StartQRData();
             startMetaData.fromString(result.getText());
-            if (capturing === false || capturedImageStrList.length === 0) {
-              setCapturing(true);
-              startCapture(startMetaData);
-            }
+            console.log("try startCapture", captured.current);
+            startCapture(startMetaData);
           }
         }
         codeReaderContlolsRef.current = controls;
@@ -130,7 +134,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         codeReaderContlolsRef.current = null;
       }
     };
-  }, [capturing, selectedCameraInfo.deviceId, startCapture]);
+  }, [selectedCameraInfo.deviceId]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -321,8 +325,8 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       <Webcam
         audio={false}
         ref={webcamRef}
-        width={selectedCameraInfo.width}
-        height={selectedCameraInfo.height}
+        width={1280}
+        // height={selectedCameraInfo.height}
         videoConstraints={{ deviceId: selectedCameraInfo.deviceId }}
       ></Webcam>
       <br />
