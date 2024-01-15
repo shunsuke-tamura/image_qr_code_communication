@@ -106,13 +106,13 @@ const ToCQrPage = () => {
   };
 
   const startShowingCQrCode = (cQrCodeNum: number) => {
-    console.log("start showing CQR code");
+    console.log("start showing CQR code", cQrCodeNum);
 
     const cQrHandler = (showIndex: number) => {
       console.log(showIndex);
       setShowingCQrContainerIndex(showIndex);
       timerRef.current = setTimeout(
-        () => cQrHandler((showIndex + 1) % cQrCodeNum),
+        () => cQrHandler((showIndex + 1) % (cQrCodeNum + 1) /* +1 for meta */),
         showIndex === 0 ? LONG_INTERVAL : SHORT_INTERVAL
       );
     };
@@ -171,7 +171,7 @@ const ToCQrPage = () => {
                 }
               />
             ) : (
-              cQrContainerList[showingCQrContainerIndex]
+              cQrContainerList[showingCQrContainerIndex - 1]
             )
           ) : null}
           {/* {startQRStringData !== "" ? (
