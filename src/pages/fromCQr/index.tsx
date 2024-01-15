@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
 import { IScannerControls } from "@zxing/browser";
@@ -51,6 +51,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   const recorded = useRef<boolean>(false);
   const [recordedBlobUrl, setRecordedBlobUrl] = useState<string>("");
   const codeReaderContlolsRef = useRef<null | IScannerControls>(null);
+  const startMetaData = useMemo(() => new StartQRData(), []);
 
   const getCameraInfo = (camera: InputDeviceInfo): CameraInfo => {
     const capabilities = camera.getCapabilities();
@@ -91,17 +92,53 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     })();
   }, []);
 
-  const capture = () => {
-    // TODO: implement
-    return "";
-  };
+  const startCaptureing = useCallback(async () => {
+    if (!recordedBlobUrl || capturedImageStrList.length !== 0) return;
+    console.log("start capture", startMetaData, recordedBlobUrl);
+    try {
+      const video = document.createElement("video");
+      video.src = recordedBlobUrl;
+      video.currentTime = Number.MAX_SAFE_INTEGER;
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadeddata = async () => {
+        const duration = video.duration * 1000;
+        console.log("duration", duration);
+        // video to image
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) return;
+        let currentTime = 0;
+        for (;;) {
+          console.log(currentTime);
+          if (currentTime >= duration) break;
+          currentTime += startMetaData.oneCQRShowingTime / 2;
+          video.currentTime = currentTime / 1000;
+          await video.play();
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const imageStr = canvas.toDataURL("image/png");
+          capturedImageStrList.push(imageStr);
+        }
+        console.log(capturedImageStrList.length);
+        return video.pause();
+      };
 
-  const startCaptureing = async (startMetaData: StartQRData) => {
-    console.log("start capture", startMetaData);
-    // TODO: implement
-  };
+      video.load();
+    } catch (e) {
+      console.log(e);
+    }
+  }, [capturedImageStrList, recordedBlobUrl, startMetaData]);
 
-  const startRecording = async (startMetaData: StartQRData) => {
+  useEffect(() => {
+    if (!recordedBlobUrl) return;
+    startCaptureing();
+  }, [recordedBlobUrl, startCaptureing]);
+
+  const startRecording = async () => {
     if (recorded.current || recording) return;
     console.log("start recording", startMetaData);
     recorded.current = true;
@@ -127,10 +164,9 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       (result, _err, controls) => {
         if (result) {
           if (result.getText() !== "") {
-            const startMetaData = new StartQRData();
             startMetaData.fromString(result.getText());
             console.log("try to start recording", startMetaData);
-            startRecording(startMetaData);
+            startRecording();
           }
         }
         codeReaderContlolsRef.current = controls;
@@ -338,9 +374,9 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         videoConstraints={{ deviceId: selectedCameraInfo.deviceId }}
       ></Webcam>
       <br />
-      {recordedBlobUrl !== "" && (
+      {/* {recordedBlobUrl !== "" && (
         <video src={recordedBlobUrl} autoPlay controls loop />
-      )}
+      )} */}
       <br />
       {mediaStream && (
         <MediaRecorder

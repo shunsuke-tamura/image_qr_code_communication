@@ -24,7 +24,7 @@ const MediaRecorder = ({
     } else {
       stopRecording();
     }
-  }, [recording, startRecording, stopRecording]);
+  }, [recording]);
 
   useEffect(() => {
     if (status === "stopped" && mediaBlobUrl) {
