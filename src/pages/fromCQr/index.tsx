@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Webcam from "react-webcam";
+import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
+import { IScannerControls } from "@zxing/browser";
 import { Bit } from "../../types";
+import { StartQRData } from "../../types/StartQRData";
 import {
   CQR_ROW_NUM,
   cQrCellColorList,
@@ -11,9 +14,7 @@ import {
   decimalToBitArray,
   splitArray,
 } from "../../common";
-import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
-import { IScannerControls } from "@zxing/browser";
-import { StartQRData } from "../../types/StartQRData";
+import MediaRecorder from "./MediaRecorder";
 
 type CameraInfo = {
   deviceId: string;
@@ -43,10 +44,12 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     height: 0,
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
-  const [capturing, setCapturing] = useState(false);
-  const captured = useRef<boolean>(false);
   const capturedImageStrList: string[] = useMemo(() => [], []);
   const webcamRef = useRef<Webcam>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [recording, setRecording] = useState(false);
+  const recorded = useRef<boolean>(false);
+  const [recordedBlobUrl, setRecordedBlobUrl] = useState<string>("");
   const codeReaderContlolsRef = useRef<null | IScannerControls>(null);
 
   const getCameraInfo = (camera: InputDeviceInfo): CameraInfo => {
@@ -72,46 +75,51 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         );
         setCameraList(cameras);
         setSelectedCameraInfo(getCameraInfo(cameras[0] as InputDeviceInfo));
+        setMediaStream(
+          await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: {
+                exact: cameras[0].deviceId,
+              },
+            },
+            audio: false,
+          })
+        );
       } catch (e) {
         console.log(e);
       }
     })();
   }, []);
 
-  const capture = useCallback(() => {
-    if (webcamRef.current === null) return;
-    const imageStr = webcamRef.current.getScreenshot({
-      width: selectedCameraInfo.width,
-      height: selectedCameraInfo.height,
-    });
-    return imageStr;
-  }, [webcamRef, selectedCameraInfo]);
+  const capture = () => {
+    // TODO: implement
+    return "";
+  };
 
-  const startCapture = async (startMetaData: StartQRData) => {
-    if (captured.current || capturing) return;
-    console.log("captureStart");
-    captured.current = true;
-    setCapturing(true);
-    console.log(startMetaData);
-    let totalTime = 0;
-    while (totalTime < startMetaData.totalShowingTime) {
-      const imageStr = capture();
-      if (imageStr) {
-        capturedImageStrList.push(imageStr);
-      }
-      totalTime += startMetaData.oneCQRShowingTime / 2;
-      // wait time
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(null);
-        }, startMetaData.oneCQRShowingTime / 2);
-      });
-    }
-    setCapturing(false);
+  const startCaptureing = async (startMetaData: StartQRData) => {
+    console.log("start capture", startMetaData);
+    // TODO: implement
+  };
+
+  const startRecording = async (startMetaData: StartQRData) => {
+    if (recorded.current || recording) return;
+    console.log("start recording", startMetaData);
+    recorded.current = true;
+    setRecording(true);
+    setTimeout(() => {
+      setRecording(false);
+    }, startMetaData.totalShowingTime);
   };
 
   useEffect(() => {
     if (webcamRef.current === null) return;
+
+    // reinitialize MediaRecorder
+    setMediaStream(null);
+    setTimeout(async () => {
+      setMediaStream(webcamRef.current!.stream);
+    }, 1000);
+
     const codeReader = new BrowserQRCodeReader();
     codeReader.decodeFromVideoDevice(
       selectedCameraInfo.deviceId,
@@ -121,8 +129,8 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
           if (result.getText() !== "") {
             const startMetaData = new StartQRData();
             startMetaData.fromString(result.getText());
-            console.log("try startCapture", captured.current);
-            startCapture(startMetaData);
+            console.log("try to start recording", startMetaData);
+            startRecording(startMetaData);
           }
         }
         codeReaderContlolsRef.current = controls;
@@ -330,15 +338,28 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         videoConstraints={{ deviceId: selectedCameraInfo.deviceId }}
       ></Webcam>
       <br />
+      {recordedBlobUrl !== "" && (
+        <video src={recordedBlobUrl} autoPlay controls loop />
+      )}
+      <br />
+      {mediaStream && (
+        <MediaRecorder
+          customStream={mediaStream}
+          recording={recording}
+          resultSetter={setRecordedBlobUrl}
+        />
+      )}
       <select
-        value={selectedCameraInfo.deviceId}
-        onChange={(e) =>
+        value={cameraList.findIndex(
+          (camera) => camera.deviceId === selectedCameraInfo.deviceId
+        )}
+        onChange={(e) => {
           setSelectedCameraInfo(
             getCameraInfo(
               cameraList[parseInt(e.target.value)] as InputDeviceInfo
             )
-          )
-        }
+          );
+        }}
       >
         {cameraList.map((camera, idx) => (
           <option value={idx} key={camera.deviceId}>
@@ -347,12 +368,12 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         ))}
       </select>
       <br />
-      {capturing ? (
+      {recording ? (
         <button onClick={undefined} className="secondary">
           Stop
         </button>
       ) : (
-        <button onClick={() => startCapture} className="primary">
+        <button onClick={undefined} className="primary">
           Start
         </button>
       )}
