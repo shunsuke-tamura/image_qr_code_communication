@@ -43,9 +43,7 @@ const MediaRecorder = ({
     }
   }, [status, mediaBlobUrl, resultSetter]);
 
-  return (
-    <>{mediaBlobUrl && <video src={mediaBlobUrl} autoPlay controls loop />}</>
-  );
+  return <></>;
 };
 
 export default MediaRecorder;
