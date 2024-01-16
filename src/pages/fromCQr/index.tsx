@@ -427,8 +427,14 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         audio={false}
         videoConstraints={{
           deviceId: selectedCameraInfo.deviceId,
-          width: selectedCameraInfo.width,
-          height: selectedCameraInfo.height,
+          width: {
+            ideal: selectedCameraInfo.width,
+            max: 3840,
+          },
+          height: {
+            ideal: selectedCameraInfo.height,
+            max: 2160,
+          },
         }}
         ref={webcamRef}
         width={640}
