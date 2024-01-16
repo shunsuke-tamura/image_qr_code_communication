@@ -153,8 +153,37 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
 
     // reinitialize MediaRecorder
     setMediaStream(null);
+    console.log("reinitialize MediaRecorder", selectedCameraInfo);
     setTimeout(async () => {
-      setMediaStream(webcamRef.current!.stream);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          // deviceId: {
+          //   exact: selectedCameraInfo.deviceId,
+          // },
+          // 実行するたび、条件が変わるため、どうしtらいいかわからない
+          width: {
+            min: 1280,
+            max: selectedCameraInfo.width,
+            ideal: selectedCameraInfo.width,
+          },
+          height: {
+            min: 720,
+            max: selectedCameraInfo.height,
+            ideal: selectedCameraInfo.height,
+          },
+          frameRate: {
+            max: 30,
+          },
+        },
+        audio: false,
+      });
+      console.log(
+        "stream width, height",
+        stream.getVideoTracks()[0].getSettings().width,
+        stream.getVideoTracks()[0].getSettings().height,
+        stream.getVideoTracks()[0].getSettings().frameRate
+      );
+      setMediaStream(stream);
     }, 1000);
 
     const codeReader = new BrowserQRCodeReader();
@@ -178,7 +207,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         codeReaderContlolsRef.current = null;
       }
     };
-  }, [selectedCameraInfo.deviceId]);
+  }, [selectedCameraInfo]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -369,7 +398,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       <Webcam
         audio={false}
         ref={webcamRef}
-        width={1280}
+        width={1080}
         // height={selectedCameraInfo.height}
         videoConstraints={{ deviceId: selectedCameraInfo.deviceId }}
       ></Webcam>
@@ -381,6 +410,8 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       {mediaStream && (
         <MediaRecorder
           customStream={mediaStream}
+          // width={selectedCameraInfo.width}
+          // height={selectedCameraInfo.height}
           recording={recording}
           resultSetter={setRecordedBlobUrl}
         />
