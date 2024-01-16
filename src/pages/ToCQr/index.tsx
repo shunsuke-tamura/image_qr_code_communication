@@ -158,7 +158,11 @@ const ToCQrPage = () => {
         <div
           style={{
             padding: "15px",
+            margin: "15px",
             backgroundColor: "white",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
           {startQRStringData !== "" ? (
@@ -174,7 +178,15 @@ const ToCQrPage = () => {
               cQrContainerList[showingCQrContainerIndex - 1]
             )
           ) : null}
-          {/* {startQRStringData !== "" ? (
+        </div>
+        {/* <div
+          style={{
+            padding: "15px",
+            margin: "15px",
+            backgroundColor: "white",
+          }}
+        >
+          {startQRStringData !== "" ? (
             <QRCodeSVG
               value={startQRStringData}
               size={
@@ -183,8 +195,21 @@ const ToCQrPage = () => {
               }
             />
           ) : null}
-          {cQrContainerList.map((cQrContainer) => cQrContainer)} */}
         </div>
+        {cQrContainerList.map((cQrContainer) => (
+          <div
+            style={{
+              padding: "15px",
+              margin: "15px",
+              backgroundColor: "white",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            {cQrContainer}
+          </div>
+        ))} */}
       </div>
       <br />
       <br />
