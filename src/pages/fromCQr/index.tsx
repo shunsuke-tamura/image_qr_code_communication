@@ -105,12 +105,6 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     })();
   }, []);
 
-  // change new mediaStream to video element
-  useEffect(() => {
-    if (!videoRef.current || !mediaStream) return;
-    videoRef.current.srcObject = mediaStream;
-  }, [mediaStream]);
-
   const startRecording = async () => {
     if (recorded.current || recording) return;
     console.log("start recording", startMetaData);
