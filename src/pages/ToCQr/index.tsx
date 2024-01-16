@@ -157,7 +157,7 @@ const ToCQrPage = () => {
         </button>
         <div
           style={{
-            padding: "15px",
+            padding: "100px",
             margin: "15px",
             backgroundColor: "white",
             display: "flex",

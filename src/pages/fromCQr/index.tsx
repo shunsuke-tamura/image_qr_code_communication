@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Webcam from "react-webcam";
 import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
 import { IScannerControls } from "@zxing/browser";
 import jsQR from "jsqr";
@@ -58,7 +57,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
   const capturedImageList: ImageObject[] = useMemo(() => [], []);
-  const webcamRef = useRef<Webcam>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
   const recorded = useRef<boolean>(false);
@@ -104,6 +103,86 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       }
     })();
   }, []);
+
+  // change new mediaStream to video element
+  useEffect(() => {
+    if (!videoRef.current || !mediaStream) return;
+    videoRef.current.srcObject = mediaStream;
+  }, [mediaStream]);
+
+  const startRecording = async () => {
+    if (recorded.current || recording) return;
+    console.log("start recording", startMetaData);
+    recorded.current = true;
+    setRecording(true);
+    setTimeout(() => {
+      setRecording(false);
+    }, startMetaData.totalShowingTime);
+  };
+
+  useEffect(() => {
+    // reinitialize MediaRecorder
+    setMediaStream(null);
+    console.log("reinitialize MediaRecorder", selectedCameraInfo);
+    setTimeout(async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: {
+            exact: selectedCameraInfo.deviceId,
+          },
+          // 実行するたび、条件が変わるため、どうしtらいいかわからない
+          width: {
+            min: 640,
+            max: selectedCameraInfo.width,
+            ideal: selectedCameraInfo.width,
+          },
+          // height: {
+          //   min: 720,
+          //   max: selectedCameraInfo.height,
+          //   ideal: selectedCameraInfo.height,
+          // },
+          frameRate: {
+            max: 30,
+          },
+          facingMode: "environment",
+        },
+        audio: false,
+      });
+      console.log(
+        "stream width, height",
+        stream.getVideoTracks()[0].getSettings().deviceId,
+        stream.getVideoTracks()[0].getSettings().width,
+        stream.getVideoTracks()[0].getSettings().height,
+        stream.getVideoTracks()[0].getSettings().frameRate
+      );
+      setMediaStream(stream);
+    }, 1000);
+
+    if (!videoRef.current) return;
+    const codeReader = new BrowserQRCodeReader();
+    codeReader.decodeFromVideoDevice(
+      selectedCameraInfo.deviceId,
+      // videoRef.current,
+      undefined,
+      (result, _err, controls) => {
+        if (result) {
+          if (result.getText() !== "") {
+            startMetaData.fromString(result.getText());
+            console.log("try to start recording", startMetaData);
+            startRecording();
+          }
+        }
+        codeReaderContlolsRef.current = controls;
+      }
+    );
+    return () => {
+      if (codeReaderContlolsRef.current) {
+        codeReaderContlolsRef.current.stop();
+        codeReaderContlolsRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCameraInfo]);
 
   const detectQRCode = useCallback((image: ImageData) => {
     const code = jsQR(image.data, image.width, image.height);
@@ -183,78 +262,6 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     if (!recordedBlobUrl) return;
     execProcess();
   }, [recordedBlobUrl, execProcess]);
-
-  const startRecording = async () => {
-    if (recorded.current || recording) return;
-    console.log("start recording", startMetaData);
-    recorded.current = true;
-    setRecording(true);
-    setTimeout(() => {
-      setRecording(false);
-    }, startMetaData.totalShowingTime);
-  };
-
-  useEffect(() => {
-    if (webcamRef.current === null) return;
-
-    // reinitialize MediaRecorder
-    setMediaStream(null);
-    console.log("reinitialize MediaRecorder", selectedCameraInfo);
-    setTimeout(async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          // deviceId: {
-          //   exact: selectedCameraInfo.deviceId,
-          // },
-          // 実行するたび、条件が変わるため、どうしtらいいかわからない
-          width: {
-            min: 1280,
-            max: selectedCameraInfo.width,
-            ideal: selectedCameraInfo.width,
-          },
-          height: {
-            min: 720,
-            max: selectedCameraInfo.height,
-            ideal: selectedCameraInfo.height,
-          },
-          frameRate: {
-            max: 30,
-          },
-        },
-        audio: false,
-      });
-      console.log(
-        "stream width, height",
-        stream.getVideoTracks()[0].getSettings().width,
-        stream.getVideoTracks()[0].getSettings().height,
-        stream.getVideoTracks()[0].getSettings().frameRate
-      );
-      setMediaStream(stream);
-    }, 1000);
-
-    const codeReader = new BrowserQRCodeReader();
-    codeReader.decodeFromVideoDevice(
-      selectedCameraInfo.deviceId,
-      webcamRef.current.video as HTMLVideoElement,
-      (result, _err, controls) => {
-        if (result) {
-          if (result.getText() !== "") {
-            startMetaData.fromString(result.getText());
-            console.log("try to start recording", startMetaData);
-            startRecording();
-          }
-        }
-        codeReaderContlolsRef.current = controls;
-      }
-    );
-    return () => {
-      if (codeReaderContlolsRef.current) {
-        codeReaderContlolsRef.current.stop();
-        codeReaderContlolsRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCameraInfo]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -442,14 +449,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   return (
     <div>
       <h1>From CQR Page</h1>
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        width={1080}
-        // height={selectedCameraInfo.height}
-        videoConstraints={{ deviceId: selectedCameraInfo.deviceId }}
-      ></Webcam>
-      <br />
+      <video ref={videoRef} autoPlay muted playsInline width={640} />
       {/* {recordedBlobUrl !== "" && (
         <video src={recordedBlobUrl} autoPlay controls loop />
       )} */}
