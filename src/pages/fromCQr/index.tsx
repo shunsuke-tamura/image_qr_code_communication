@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
 import { IScannerControls } from "@zxing/browser";
+import jsQR from "jsqr";
 import { Bit } from "../../types";
 import { StartQRData } from "../../types/StartQRData";
 import {
@@ -15,9 +16,21 @@ import {
   splitArray,
 } from "../../common";
 import MediaRecorder from "./MediaRecorder";
+import { Point } from "jsqr/dist/locator";
 
 type CameraInfo = {
   deviceId: string;
+  width: number;
+  height: number;
+};
+
+type ImageObject = {
+  data: ImageData;
+  str: string;
+};
+
+type QRCodePosition = {
+  topLeft: Point;
   width: number;
   height: number;
 };
@@ -44,7 +57,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     height: 0,
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
-  const capturedImageStrList: string[] = useMemo(() => [], []);
+  const capturedImageList: ImageObject[] = useMemo(() => [], []);
   const webcamRef = useRef<Webcam>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
@@ -92,8 +105,21 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     })();
   }, []);
 
-  const startCaptureing = useCallback(async () => {
-    if (!recordedBlobUrl || capturedImageStrList.length !== 0) return;
+  const detectQRCode = useCallback((image: ImageData) => {
+    const code = jsQR(image.data, image.width, image.height);
+    if (code) {
+      return {
+        topLeft: code.location.topLeftCorner,
+        width: code.location.topRightCorner.x - code.location.topLeftCorner.x,
+        height:
+          code.location.bottomLeftCorner.y - code.location.topLeftCorner.y,
+      };
+    }
+    return undefined;
+  }, []);
+
+  const execProcess = useCallback(async () => {
+    if (!recordedBlobUrl || capturedImageList.length !== 0) return;
     console.log("start capture", startMetaData, recordedBlobUrl);
     try {
       const video = document.createElement("video");
@@ -105,25 +131,45 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       video.onloadeddata = async () => {
         const duration = video.duration * 1000;
         console.log("duration", duration);
-        // video to image
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
         if (ctx === null) return;
         let currentTime = 0;
+        let qrCodePosition: QRCodePosition | undefined = undefined;
         for (;;) {
           console.log(currentTime);
           if (currentTime >= duration) break;
+          // video to image
           currentTime += startMetaData.oneCQRShowingTime / 2;
           video.currentTime = currentTime / 1000;
           await video.play();
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          // const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const imageStr = canvas.toDataURL("image/png");
-          capturedImageStrList.push(imageStr);
+          const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+          // detect QR code
+          const detected = detectQRCode(image);
+          if (detected) {
+            qrCodePosition = detected;
+            continue;
+          }
+
+          if (!qrCodePosition) throw new Error("cannot detect QR code");
+
+          // crop image
+          const cropped = ctx.getImageData(
+            qrCodePosition.topLeft.x,
+            qrCodePosition.topLeft.y,
+            qrCodePosition.width,
+            qrCodePosition.height
+          );
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.putImageData(cropped, 0, 0);
+          const croppedStr = canvas.toDataURL("image/png");
+          capturedImageList.push({ data: cropped, str: croppedStr });
         }
-        console.log(capturedImageStrList.length);
+        console.log(capturedImageList.length);
         return video.pause();
       };
 
@@ -131,12 +177,12 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     } catch (e) {
       console.log(e);
     }
-  }, [capturedImageStrList, recordedBlobUrl, startMetaData]);
+  }, [capturedImageList, detectQRCode, recordedBlobUrl, startMetaData]);
 
   useEffect(() => {
     if (!recordedBlobUrl) return;
-    startCaptureing();
-  }, [recordedBlobUrl, startCaptureing]);
+    execProcess();
+  }, [recordedBlobUrl, execProcess]);
 
   const startRecording = async () => {
     if (recorded.current || recording) return;
@@ -207,6 +253,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         codeReaderContlolsRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCameraInfo]);
 
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -494,9 +541,9 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
               </div>
             )
           )}
-          {capturedImageStrList.map((imageStr, idx) => (
+          {capturedImageList.map((image, idx) => (
             <div style={{ marginTop: "10px" }}>
-              <img src={imageStr} key={idx} />
+              <img src={image.str} key={idx} />
             </div>
           ))}
         </div>
