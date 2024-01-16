@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserQRCodeReader } from "@zxing/browser/esm/readers/BrowserQRCodeReader";
 import { IScannerControls } from "@zxing/browser";
 import jsQR from "jsqr";
+import Webcam from "react-webcam";
 import { Bit } from "../../types";
 import { StartQRData } from "../../types/StartQRData";
 import {
@@ -57,7 +58,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
   const capturedImageList: ImageObject[] = useMemo(() => [], []);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const webcamRef = useRef<Webcam>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
   const recorded = useRef<boolean>(false);
@@ -121,33 +122,14 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   };
 
   useEffect(() => {
+    if (!webcamRef.current) return;
+
     // reinitialize MediaRecorder
     setMediaStream(null);
     console.log("reinitialize MediaRecorder", selectedCameraInfo);
     setTimeout(async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: {
-            exact: selectedCameraInfo.deviceId,
-          },
-          // 実行するたび、条件が変わるため、どうしtらいいかわからない
-          width: {
-            min: 640,
-            max: selectedCameraInfo.width,
-            ideal: selectedCameraInfo.width,
-          },
-          // height: {
-          //   min: 720,
-          //   max: selectedCameraInfo.height,
-          //   ideal: selectedCameraInfo.height,
-          // },
-          frameRate: {
-            max: 30,
-          },
-          facingMode: "environment",
-        },
-        audio: false,
-      });
+      const stream = webcamRef.current!.stream;
+      if (!stream) return;
       console.log(
         "stream width, height",
         stream.getVideoTracks()[0].getSettings().deviceId,
@@ -158,11 +140,9 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       setMediaStream(stream);
     }, 1000);
 
-    if (!videoRef.current) return;
     const codeReader = new BrowserQRCodeReader();
     codeReader.decodeFromVideoDevice(
       selectedCameraInfo.deviceId,
-      // videoRef.current,
       undefined,
       (result, _err, controls) => {
         if (result) {
@@ -449,7 +429,17 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   return (
     <div>
       <h1>From CQR Page</h1>
-      <video ref={videoRef} autoPlay muted playsInline width={640} />
+      <Webcam
+        audio={false}
+        videoConstraints={{
+          deviceId: selectedCameraInfo.deviceId,
+          width: selectedCameraInfo.width,
+          height: selectedCameraInfo.height,
+        }}
+        ref={webcamRef}
+        width={640}
+      ></Webcam>
+      <br />
       {/* {recordedBlobUrl !== "" && (
         <video src={recordedBlobUrl} autoPlay controls loop />
       )} */}
