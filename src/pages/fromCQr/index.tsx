@@ -57,7 +57,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     height: 0,
   });
   const [cameraList, setCameraList] = useState<MediaDeviceInfo[]>([]);
-  const capturedImageList: ImageObject[] = useMemo(() => [], []);
+  const [capturedImageList, setCapturedImageList] = useState<ImageObject[]>([]);
   const webcamRef = useRef<Webcam>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
@@ -158,6 +158,94 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCameraInfo]);
 
+  const captureImage = useCallback(async () => {
+    try {
+      if (!recordedBlobUrl) throw new Error("cannot get recordedBlobUrl");
+      // convert blob to base64
+      const blob = await (await fetch(recordedBlobUrl)).blob();
+      const extension = blob.type.split("/")[1];
+      // const base64 = await new Promise<string>((resolve) => {
+      //   const reader = new FileReader();
+      //   reader.readAsDataURL(blob);
+      //   reader.onloadend = () => {
+      //     const base64data = reader.result?.toString() ?? "";
+      //     resolve(base64data);
+      //   };
+      //   reader.onerror = (error) => {
+      //     console.log("blob load error: ", error);
+      //     resolve("");
+      //   };
+      // });
+      // if (base64 === "") throw new Error("cannot convert blob to base64");
+
+      // capture request
+      console.log("process-video request");
+      const query = {
+        interval: startMetaData.oneCQRShowingTime / 2,
+        extension: extension,
+        duration: startMetaData.totalShowingTime,
+      };
+      const formData = new FormData();
+      const fileObj = new File([blob], "video." + extension);
+      formData.append("video", fileObj);
+
+      const searchParam = new URLSearchParams();
+      Object.entries(query).forEach(([key, value]) => {
+        searchParam.append(key, value.toString());
+      });
+      // const baseUrl = "https://q9b0ps93-8080.asse.devtunnels.ms"
+      const baseUrl = "http://localhost:8080";
+      const endPoint = "/api/process-video";
+      const requestUrl = `${baseUrl}${endPoint}?${searchParam.toString()}`;
+      const res = await fetch(requestUrl, {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      console.log("process-video res", json);
+      return json.images as string[];
+    } catch (e) {
+      console.log("captureImage", e);
+      return undefined;
+    }
+  }, [recordedBlobUrl, startMetaData.oneCQRShowingTime]);
+
+  const b64ToBlob = (base64: string) => {
+    const bin = atob(base64.replace(/^.*,/, ""));
+    const buffer = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+      buffer[i] = bin.charCodeAt(i);
+    }
+    // Blobを作成
+    try {
+      const blob = new Blob([buffer.buffer], {
+        type: "image/png",
+      });
+      return blob;
+    } catch (e) {
+      console.log("b64ToBlob", e);
+      return undefined;
+    }
+  };
+
+  const BlobToImageData = (blob: Blob) => {
+    const blobUrl = URL.createObjectURL(blob);
+    return new Promise<ImageData | undefined>((resolve) => {
+      const img = new Image();
+      img.src = blobUrl;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) return;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        resolve(imageData);
+      };
+    });
+  };
+
   const detectQRCode = useCallback((image: ImageData) => {
     const code = jsQR(image.data, image.width, image.height);
     if (code) {
@@ -174,62 +262,75 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   const execProcess = useCallback(async () => {
     if (!recordedBlobUrl || capturedImageList.length !== 0) return;
     console.log("start capture", startMetaData, recordedBlobUrl);
-    try {
-      const video = document.createElement("video");
-      video.src = recordedBlobUrl;
-      video.currentTime = Number.MAX_SAFE_INTEGER;
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.onloadeddata = async () => {
-        const duration = video.duration * 1000;
-        console.log("duration", duration);
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        if (ctx === null) return;
-        let currentTime = 0;
-        let qrCodePosition: QRCodePosition | undefined = undefined;
-        for (;;) {
-          console.log(currentTime);
-          if (currentTime >= duration) break;
-          // video to image
-          currentTime += startMetaData.oneCQRShowingTime / 2;
-          video.currentTime = currentTime / 1000;
-          await video.play();
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-          // detect QR code
-          const detected = detectQRCode(image);
-          if (detected) {
-            qrCodePosition = detected;
-            continue;
-          }
-
-          if (!qrCodePosition) throw new Error("cannot detect QR code");
-
-          // crop image
-          const cropped = ctx.getImageData(
-            qrCodePosition.topLeft.x,
-            qrCodePosition.topLeft.y,
-            qrCodePosition.width,
-            qrCodePosition.height
-          );
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.putImageData(cropped, 0, 0);
-          const croppedStr = canvas.toDataURL("image/png");
-          capturedImageList.push({ data: cropped, str: croppedStr });
-        }
-        console.log(capturedImageList.length);
-        return video.pause();
-      };
-
-      video.load();
-    } catch (e) {
-      console.log(e);
+    const images = await captureImage();
+    if (!images) {
+      console.log("capture failed");
+      return;
     }
+    const dataList = images.map(async (image) => {
+      const blob = b64ToBlob(image);
+      if (!blob) throw new Error("cannot convert base64 to blob");
+      const imageData = await BlobToImageData(blob);
+      if (!imageData) throw new Error("cannot convert blob to imageData");
+      return { data: imageData, str: URL.createObjectURL(blob) };
+    });
+    setCapturedImageList(await Promise.all(dataList));
+    // try {
+    //   const video = document.createElement("video");
+    //   video.src = recordedBlobUrl;
+    //   video.currentTime = Number.MAX_SAFE_INTEGER;
+    //   video.autoplay = true;
+    //   video.muted = true;
+    //   video.playsInline = true;
+    //   video.onloadeddata = async () => {
+    //     const duration = video.duration * 1000;
+    //     console.log("duration", duration);
+    //     const canvas = document.createElement("canvas");
+    //     canvas.width = video.videoWidth;
+    //     canvas.height = video.videoHeight;
+    //     const ctx = canvas.getContext("2d");
+    //     if (ctx === null) return;
+    //     let currentTime = 0;
+    //     let qrCodePosition: QRCodePosition | undefined = undefined;
+    //     for (;;) {
+    //       console.log(currentTime);
+    //       if (currentTime >= duration) break;
+    //       // video to image
+    //       currentTime += startMetaData.oneCQRShowingTime / 2;
+    //       video.currentTime = currentTime / 1000;
+    //       await video.play();
+    //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    //       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    //       // detect QR code
+    //       const detected = detectQRCode(image);
+    //       if (detected) {
+    //         qrCodePosition = detected;
+    //         continue;
+    //       }
+
+    //       if (!qrCodePosition) throw new Error("cannot detect QR code");
+
+    //       // crop image
+    //       const cropped = ctx.getImageData(
+    //         qrCodePosition.topLeft.x,
+    //         qrCodePosition.topLeft.y,
+    //         qrCodePosition.width,
+    //         qrCodePosition.height
+    //       );
+    //       ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //       ctx.putImageData(cropped, 0, 0);
+    //       const croppedStr = canvas.toDataURL("image/png");
+    //       capturedImageList.push({ data: cropped, str: croppedStr });
+    //     }
+    //     console.log(capturedImageList.length);
+    //     return video.pause();
+    //   };
+
+    //   video.load();
+    // } catch (e) {
+    //   console.log(e);
+    // }
   }, [capturedImageList, detectQRCode, recordedBlobUrl, startMetaData]);
 
   useEffect(() => {
