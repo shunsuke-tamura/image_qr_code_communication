@@ -208,7 +208,11 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       console.log("captureImage", e);
       return undefined;
     }
-  }, [recordedBlobUrl, startMetaData.oneCQRShowingTime]);
+  }, [
+    recordedBlobUrl,
+    startMetaData.oneCQRShowingTime,
+    startMetaData.totalShowingTime,
+  ]);
 
   const b64ToBlob = (base64: string) => {
     const bin = atob(base64.replace(/^.*,/, ""));
@@ -267,14 +271,60 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       console.log("capture failed");
       return;
     }
-    const dataList = images.map(async (image) => {
+    console.log("capture success", images.length);
+    const dataList: ImageObject[] = [];
+    let qrCodePosition: QRCodePosition | undefined = undefined;
+    let lastImageIsQR = false;
+    let isCQRPart = false;
+    for (const [idx, image] of images.entries()) {
+      console.log("image", idx);
       const blob = b64ToBlob(image);
       if (!blob) throw new Error("cannot convert base64 to blob");
       const imageData = await BlobToImageData(blob);
       if (!imageData) throw new Error("cannot convert blob to imageData");
-      return { data: imageData, str: URL.createObjectURL(blob) };
-    });
-    setCapturedImageList(await Promise.all(dataList));
+      try {
+        const detected = detectQRCode(imageData);
+        if (detected) {
+          qrCodePosition = detected;
+          lastImageIsQR = true;
+          console.log("detected", idx);
+          if (isCQRPart) break;
+          continue;
+        }
+        if (!qrCodePosition) return;
+        if (lastImageIsQR) {
+          isCQRPart = true;
+        }
+        lastImageIsQR = false;
+        // crop image
+        const canvas = document.createElement("canvas");
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) return;
+        ctx.putImageData(imageData, 0, 0);
+        const cropped = ctx.getImageData(
+          qrCodePosition.topLeft.x,
+          qrCodePosition.topLeft.y,
+          qrCodePosition.width,
+          qrCodePosition.height
+        );
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = cropped.width;
+        canvas.height = cropped.height;
+        ctx.putImageData(cropped, 0, 0);
+        console.log("push", idx);
+        dataList.push({
+          data: cropped,
+          str: canvas.toDataURL("image/png"),
+        });
+      } catch (e) {
+        console.log(e);
+        dataList.push({ data: imageData, str: URL.createObjectURL(blob) });
+      }
+    }
+    console.log("dataList", dataList.length);
+    setCapturedImageList(dataList);
     // try {
     //   const video = document.createElement("video");
     //   video.src = recordedBlobUrl;
@@ -331,7 +381,13 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     // } catch (e) {
     //   console.log(e);
     // }
-  }, [capturedImageList, detectQRCode, recordedBlobUrl, startMetaData]);
+  }, [
+    captureImage,
+    capturedImageList.length,
+    detectQRCode,
+    recordedBlobUrl,
+    startMetaData,
+  ]);
 
   useEffect(() => {
     if (!recordedBlobUrl) return;
