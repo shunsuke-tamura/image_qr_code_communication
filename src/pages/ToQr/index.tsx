@@ -16,6 +16,7 @@ const ToQrPage = () => {
   const convertImageToString = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      //  TODO: use readAsArrayBuffer instead of readAsBinaryString
       reader.readAsBinaryString(file);
       reader.onload = () => {
         const imageString = reader.result?.toString();
@@ -33,7 +34,7 @@ const ToQrPage = () => {
     return new Promise((resolve, reject) => {
       QRcode.toDataURL(
         imageString,
-        { errorCorrectionLevel: "L", version: 13, mode: "byte" },
+        { errorCorrectionLevel: "L", version: 27, mode: "byte", width: 720 },
         (err: Error | null, url?: string) => {
           if (err) {
             reject(err);
@@ -86,7 +87,7 @@ const ToQrPage = () => {
         const imageString = await convertImageToString(imageFile);
         // const qrCodeStringChunks = splitString(imageString, 1987); // 2953 is the max size of a QR code
         // const qrCodeStringChunks = splitString(imageString, 1100); // 2953 is the max size of a QR code
-        const qrCodeStringChunks = splitString(imageString, 271); // 2953 is the max size of a QR code
+        const qrCodeStringChunks = splitString(imageString, 960); // 2953 is the max size of a QR code
         const temp: string[] = [await convertStringToQrCode("start")];
         for (let i = 0; i < qrCodeStringChunks.length; i++) {
           const qrCodeString = await convertStringToQrCode(
@@ -113,8 +114,13 @@ const ToQrPage = () => {
       </button>
       <br />
       {qrCodes.length !== 0 ? (
-        <div style={{ backgroundColor: "white", padding: "70px" }}>
-          <img src={qrCodes[showingQrCodeIndex]} alt="qr code" />
+        <div style={{ backgroundColor: "white", padding: "100px" }}>
+          <img
+            src={qrCodes[showingQrCodeIndex]}
+            alt="qr code"
+            width={720}
+            height={720}
+          />
         </div>
       ) : null}
     </div>
