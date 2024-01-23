@@ -193,10 +193,11 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       Object.entries(query).forEach(([key, value]) => {
         searchParam.append(key, value.toString());
       });
-      // const baseUrl = "https://q9b0ps93-8080.asse.devtunnels.ms"
-      const baseUrl = "http://localhost:8080";
+      // const baseUrl = "https://q9b0ps93-8080.asse.devtunnels.ms";
+      // const baseUrl = "http://localhost:8080";
       const endPoint = "/api/process-video";
-      const requestUrl = `${baseUrl}${endPoint}?${searchParam.toString()}`;
+      // const requestUrl = `${baseUrl}${endPoint}?${searchParam.toString()}`;
+      const requestUrl = `${endPoint}?${searchParam.toString()}`;
       const res = await fetch(requestUrl, {
         method: "POST",
         body: formData,
@@ -215,6 +216,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   ]);
 
   const b64ToBlob = (base64: string) => {
+    console.log("b64ToBlob");
     const bin = atob(base64.replace(/^.*,/, ""));
     const buffer = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) {
@@ -233,6 +235,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   };
 
   const BlobToImageData = (blob: Blob) => {
+    console.log("BlobToImageData");
     const blobUrl = URL.createObjectURL(blob);
     return new Promise<ImageData | undefined>((resolve) => {
       const img = new Image();
@@ -251,6 +254,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   };
 
   const detectQRCode = useCallback((image: ImageData) => {
+    console.log("detectQRCode");
     const code = jsQR(image.data, image.width, image.height);
     if (code) {
       return {
@@ -284,6 +288,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       if (!imageData) throw new Error("cannot convert blob to imageData");
       try {
         const detected = detectQRCode(imageData);
+        console.log("detected", detected !== undefined);
         if (detected) {
           qrCodePosition = detected;
           lastImageIsQR = true;
@@ -291,27 +296,34 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
           if (isCQRPart) break;
           continue;
         }
-        if (!qrCodePosition) return;
+        if (!qrCodePosition) continue;
         if (lastImageIsQR) {
           isCQRPart = true;
         }
         lastImageIsQR = false;
         // crop image
+        console.log("create canvas");
         const canvas = document.createElement("canvas");
+        console.log("set size");
         canvas.width = imageData.width;
         canvas.height = imageData.height;
+        console.log("get ctx");
         const ctx = canvas.getContext("2d");
-        if (ctx === null) return;
+        if (ctx === null) continue;
+        console.log("put src");
         ctx.putImageData(imageData, 0, 0);
+        console.log("crop");
         const cropped = ctx.getImageData(
           qrCodePosition.topLeft.x,
           qrCodePosition.topLeft.y,
           qrCodePosition.width,
           qrCodePosition.height
         );
+        console.log("clear");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvas.width = cropped.width;
         canvas.height = cropped.height;
+        console.log("put cropped");
         ctx.putImageData(cropped, 0, 0);
         console.log("push", idx);
         dataList.push({
@@ -586,11 +598,11 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
           deviceId: selectedCameraInfo.deviceId,
           width: {
             ideal: selectedCameraInfo.width,
-            max: 3840,
+            max: 1980,
           },
           height: {
             ideal: selectedCameraInfo.height,
-            max: 2160,
+            max: 1080,
           },
         }}
         ref={webcamRef}
