@@ -333,9 +333,9 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
       if (ocrRes.data.text === "") {
         console.log(croppedBinaryImageStr, ocrRes.data.text);
         ocrRes.data.text =
-          subjectList[0] +
+          partPropertyList[0].list[0] +
           " " +
-          verbList[0] +
+          partPropertyList[1].list[0] +
           " " +
           partPropertyList[2].list[0] +
           " " +
@@ -345,10 +345,10 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
           sentence: "",
         });
       } else {
-      temp.push({
-        image: croppedBinaryImageStr,
-        sentence: ocrRes.data.text,
-      });
+        temp.push({
+          image: croppedBinaryImageStr,
+          sentence: ocrRes.data.text,
+        });
       }
 
       // set word
