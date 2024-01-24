@@ -472,13 +472,17 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cropeCellImage = (srcImage: any): Promise<CellData[]> => {
     return new Promise((resolve) => {
+      let startTime: number = 0;
+      let endTime: number = 0;
+
+      startTime = performance.now();
       const gray = new cv.Mat();
       const binary = new cv.Mat();
       const dst = cv.Mat.zeros(srcImage.rows, srcImage.cols, cv.CV_8UC3);
       cv.cvtColor(srcImage, gray, cv.COLOR_RGBA2GRAY, 0);
-      cv.imshow("gray", gray);
+      // cv.imshow("gray", gray);
       cv.threshold(gray, binary, 10, 200, cv.THRESH_BINARY);
-      cv.imshow("binary", binary);
+      // cv.imshow("binary", binary);
       // detect rectangles
       const contours = new cv.MatVector();
       const hierarchy = new cv.Mat();
@@ -489,35 +493,39 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         cv.RETR_CCOMP, // RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE,
         cv.CHAIN_APPROX_SIMPLE
       );
+      endTime = performance.now();
+      console.log("findContours", endTime - startTime);
 
       // draw contours
-      const colors = [
-        new cv.Scalar(255, 0, 0, 255),
-        new cv.Scalar(255, 255, 255, 255),
-      ];
+      // const colors = [
+      //   new cv.Scalar(255, 0, 0, 255),
+      //   new cv.Scalar(255, 255, 255, 255),
+      // ];
       let contourIdx = 0;
       const cellDatas: CellData[] = [];
+      startTime = performance.now();
       while (hierarchy.intPtr(0, contourIdx)[0] !== -1) {
-        const color = colors[hierarchy.intPtr(0, contourIdx)[3] !== -1 ? 1 : 0];
-        cv.drawContours(
-          dst,
-          contours,
-          contourIdx,
-          color,
-          1,
-          cv.LINE_8,
-          hierarchy,
-          100
-        );
+        // const color = colors[hierarchy.intPtr(0, contourIdx)[3] !== -1 ? 1 : 0];
+        // cv.drawContours(
+        //   dst,
+        //   contours,
+        //   contourIdx,
+        //   color,
+        //   1,
+        //   cv.LINE_8,
+        //   hierarchy,
+        //   100
+        // );
 
         // trim
         const cellRect = cv.boundingRect(contours.get(contourIdx));
         const cellCroped = srcImage.roi(cellRect);
 
         const colorIdx = calcColorIdxfromCellImage(cellCroped);
-        const croppedCanvas = document.createElement("canvas");
-        cv.imshow(croppedCanvas, cellCroped);
-        const croppedImageStr = croppedCanvas.toDataURL("image/png");
+        // const croppedCanvas = document.createElement("canvas");
+        // cv.imshow(croppedCanvas, cellCroped);
+        // const croppedImageStr = croppedCanvas.toDataURL("image/png");
+        const croppedImageStr = "";
         cellDatas.push({
           image: croppedImageStr,
           colorIdx,
@@ -525,7 +533,9 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
 
         contourIdx = hierarchy.intPtr(0, contourIdx)[0];
       }
-      cv.imshow("result", dst);
+      endTime = performance.now();
+      console.log("calcCell", endTime - startTime);
+      // cv.imshow("result", dst);
       dst.delete();
       gray.delete();
       binary.delete();
@@ -555,11 +565,13 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
   };
 
   const executeHandler = async () => {
+    const startTime = performance.now();
     setCellImageColorIdxList([]);
     const decodedCQrDataList: CellData[][] = [];
     let src = new cv.Mat();
     for (const srcImage of srcImageList) {
       const p = new Promise<void>((resolve) => {
+        const startTime = performance.now();
         const img = new Image();
         img.src = URL.createObjectURL(srcImage);
         img.onload = async () => {
@@ -578,14 +590,18 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
             decodedCQrDataList.push([]);
           }
           decodedCQrDataList[cQrPrefix] = decodedCQrData.slice(CQR_ROW_NUM);
+          const endTime = performance.now();
+          console.log("decodeImage", endTime - startTime);
           resolve();
         };
       });
       await p;
     }
-    console.log(decodedCQrDataList.flat().length);
+    // console.log(decodedCQrDataList.flat().length);
     setCellImageColorIdxList(decodedCQrDataList.flat());
     convertToImage(decodedCQrDataList);
+    const endTime = performance.now();
+    console.log("total", endTime - startTime);
     src.delete();
   };
 
