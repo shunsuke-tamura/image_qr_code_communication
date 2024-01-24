@@ -332,17 +332,48 @@ const ToImageFromCCCPage = ({ srcData }: { srcData?: Bit[] }) => {
       const ocrRes = await tesseractWorker.recognize(croppedBinaryImageStr);
       if (ocrRes.data.text === "") {
         console.log(croppedBinaryImageStr, ocrRes.data.text);
-      }
+        ocrRes.data.text =
+          subjectList[0] +
+          " " +
+          verbList[0] +
+          " " +
+          partPropertyList[2].list[0] +
+          " " +
+          partPropertyList[3].list[0];
+        temp.push({
+          image: croppedBinaryImageStr,
+          sentence: "",
+        });
+      } else {
       temp.push({
         image: croppedBinaryImageStr,
         sentence: ocrRes.data.text,
       });
+      }
 
       // set word
       if (wordDataList.length < 1) {
         continue;
       }
       const wordList = ocrRes.data.text.split(" ").reverse();
+      if (wordList[2] === "Liambite") {
+        console.log("yeeeeee");
+        wordList[2] = "bite";
+        wordList.push("Liam");
+      }
+      if (wordList[2] === "Liamblink") {
+        console.log("yeeeeee");
+        wordList[2] = "blink";
+        wordList.push("Liam");
+      }
+      if (wordList[2] === "samery") {
+        console.log("yeeeeee");
+        wordList[2] = "cry";
+        wordList.push("Sam");
+      }
+      if (wordList.length !== 4) {
+        console.log("wordList.length", wordList.length, wordList);
+      }
       for (let j = 0; j < wordList.length; j++) {
         wordDataList[(sentenceCount - 1) * wordList.length + j].word =
           wordList[j];
