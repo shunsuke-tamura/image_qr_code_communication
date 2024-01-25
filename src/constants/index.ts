@@ -400,7 +400,7 @@ export const cQrCellColorList = [
 ];
 export const cQrCellColorRange = Math.log2(cQrCellColorList.length);
 
-export const CQR_ROW_NUM = 80;
+export const CQR_ROW_NUM = 30;
 
 export const LONG_INTERVAL = 1000;
 export const SHORT_INTERVAL = 100;

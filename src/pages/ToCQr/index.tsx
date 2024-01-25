@@ -27,8 +27,8 @@ const ToCQrPage = () => {
   const startQRData = new StartQRData();
 
   const CQR_CELL_STYLE = {
-    borderWidth: 2,
-    width: 5,
+    borderWidth: 6,
+    width: 12,
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
