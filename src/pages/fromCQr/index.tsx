@@ -267,145 +267,6 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     return undefined;
   }, []);
 
-  const execProcess = useCallback(async () => {
-    if (!recordedBlobUrl || capturedImageList.length !== 0) return;
-    console.log("start capture", startMetaData, recordedBlobUrl);
-    const images = await captureImage();
-    if (!images) {
-      console.log("capture failed");
-      return;
-    }
-    console.log("capture success", images.length);
-    const dataList: ImageObject[] = [];
-    let qrCodePosition: QRCodePosition | undefined = undefined;
-    let lastImageIsQR = false;
-    let isCQRPart = false;
-    for (const [idx, image] of images.entries()) {
-      console.log("image", idx);
-      const blob = b64ToBlob(image);
-      if (!blob) throw new Error("cannot convert base64 to blob");
-      const imageData = await BlobToImageData(blob);
-      if (!imageData) throw new Error("cannot convert blob to imageData");
-      try {
-        const detected = detectQRCode(imageData);
-        console.log("detected", detected !== undefined);
-        if (detected) {
-          qrCodePosition = detected;
-          lastImageIsQR = true;
-          console.log("detected", idx);
-          if (isCQRPart) break;
-          continue;
-        }
-        if (!qrCodePosition) continue;
-        if (lastImageIsQR) {
-          isCQRPart = true;
-        }
-        lastImageIsQR = false;
-        // crop image
-        console.log("create canvas");
-        const canvas = document.createElement("canvas");
-        console.log("set size");
-        canvas.width = imageData.width;
-        canvas.height = imageData.height;
-        console.log("get ctx");
-        const ctx = canvas.getContext("2d");
-        if (ctx === null) continue;
-        console.log("put src");
-        ctx.putImageData(imageData, 0, 0);
-        console.log("crop");
-        const cropped = ctx.getImageData(
-          qrCodePosition.topLeft.x,
-          qrCodePosition.topLeft.y,
-          qrCodePosition.width,
-          qrCodePosition.height
-        );
-        console.log("clear");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        canvas.width = cropped.width;
-        canvas.height = cropped.height;
-        console.log("put cropped");
-        ctx.putImageData(cropped, 0, 0);
-        console.log("push", idx);
-        dataList.push({
-          data: cropped,
-          str: canvas.toDataURL("image/png"),
-        });
-      } catch (e) {
-        console.log(e);
-        dataList.push({ data: imageData, str: URL.createObjectURL(blob) });
-      }
-    }
-    console.log("dataList", dataList.length);
-    setCapturedImageList(dataList);
-    // try {
-    //   const video = document.createElement("video");
-    //   video.src = recordedBlobUrl;
-    //   video.currentTime = Number.MAX_SAFE_INTEGER;
-    //   video.autoplay = true;
-    //   video.muted = true;
-    //   video.playsInline = true;
-    //   video.onloadeddata = async () => {
-    //     const duration = video.duration * 1000;
-    //     console.log("duration", duration);
-    //     const canvas = document.createElement("canvas");
-    //     canvas.width = video.videoWidth;
-    //     canvas.height = video.videoHeight;
-    //     const ctx = canvas.getContext("2d");
-    //     if (ctx === null) return;
-    //     let currentTime = 0;
-    //     let qrCodePosition: QRCodePosition | undefined = undefined;
-    //     for (;;) {
-    //       console.log(currentTime);
-    //       if (currentTime >= duration) break;
-    //       // video to image
-    //       currentTime += startMetaData.oneCQRShowingTime / 2;
-    //       video.currentTime = currentTime / 1000;
-    //       await video.play();
-    //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    //       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    //       // detect QR code
-    //       const detected = detectQRCode(image);
-    //       if (detected) {
-    //         qrCodePosition = detected;
-    //         continue;
-    //       }
-
-    //       if (!qrCodePosition) throw new Error("cannot detect QR code");
-
-    //       // crop image
-    //       const cropped = ctx.getImageData(
-    //         qrCodePosition.topLeft.x,
-    //         qrCodePosition.topLeft.y,
-    //         qrCodePosition.width,
-    //         qrCodePosition.height
-    //       );
-    //       ctx.clearRect(0, 0, canvas.width, canvas.height);
-    //       ctx.putImageData(cropped, 0, 0);
-    //       const croppedStr = canvas.toDataURL("image/png");
-    //       capturedImageList.push({ data: cropped, str: croppedStr });
-    //     }
-    //     console.log(capturedImageList.length);
-    //     return video.pause();
-    //   };
-
-    //   video.load();
-    // } catch (e) {
-    //   console.log(e);
-    // }
-  }, [
-    captureImage,
-    capturedImageList.length,
-    detectQRCode,
-    recordedBlobUrl,
-    startMetaData,
-  ]);
-
-  useEffect(() => {
-    if (!recordedBlobUrl) return;
-    execProcess();
-  }, [recordedBlobUrl, execProcess]);
-
   const onChangeFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const img = new Image();
@@ -564,7 +425,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     setConvertedImageStr(convertedImageStr);
   };
 
-  const executeHandler = async () => {
+  const executeHandler = async (srcImageList: ImageObject[]) => {
     const startTime = performance.now();
     setCellImageColorIdxList([]);
     const decodedCQrDataList: CellData[][] = [];
@@ -573,7 +434,8 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       const p = new Promise<void>((resolve) => {
         const startTime = performance.now();
         const img = new Image();
-        img.src = URL.createObjectURL(srcImage);
+        // img.src = URL.createObjectURL(srcImage);
+        img.src = srcImage.str;
         img.onload = async () => {
           src = cv.imread(img);
           const decodedCQrData = (await cropeCellImage(src)).reverse();
@@ -605,6 +467,140 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
     src.delete();
   };
 
+  const execProcess = async () => {
+    if (!recordedBlobUrl || capturedImageList.length !== 0) return;
+    console.log("start capture", startMetaData, recordedBlobUrl);
+    const images = await captureImage();
+    if (!images) {
+      console.log("capture failed");
+      return;
+    }
+    console.log("capture success", images.length);
+    const dataList: ImageObject[] = [];
+    let qrCodePosition: QRCodePosition | undefined = undefined;
+    let lastImageIsQR = false;
+    let isCQRPart = false;
+    for (const [idx, image] of images.entries()) {
+      console.log("image", idx);
+      const blob = b64ToBlob(image);
+      if (!blob) throw new Error("cannot convert base64 to blob");
+      const imageData = await BlobToImageData(blob);
+      if (!imageData) throw new Error("cannot convert blob to imageData");
+      try {
+        const detected = detectQRCode(imageData);
+        console.log("detected", detected !== undefined);
+        if (detected) {
+          qrCodePosition = detected;
+          lastImageIsQR = true;
+          console.log("detected", idx);
+          if (isCQRPart) break;
+          continue;
+        }
+        if (!qrCodePosition) continue;
+        if (lastImageIsQR) {
+          isCQRPart = true;
+        }
+        lastImageIsQR = false;
+        // crop image
+        console.log("create canvas");
+        const canvas = document.createElement("canvas");
+        console.log("set size");
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        console.log("get ctx");
+        const ctx = canvas.getContext("2d");
+        if (ctx === null) continue;
+        console.log("put src");
+        ctx.putImageData(imageData, 0, 0);
+        console.log("crop");
+        const cropped = ctx.getImageData(
+          qrCodePosition.topLeft.x,
+          qrCodePosition.topLeft.y,
+          qrCodePosition.width,
+          qrCodePosition.height
+        );
+        console.log("clear");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = cropped.width;
+        canvas.height = cropped.height;
+        console.log("put cropped");
+        ctx.putImageData(cropped, 0, 0);
+        console.log("push", idx);
+        dataList.push({
+          data: cropped,
+          str: canvas.toDataURL("image/png"),
+        });
+      } catch (e) {
+        console.log(e);
+        dataList.push({ data: imageData, str: URL.createObjectURL(blob) });
+      }
+    }
+    console.log("dataList", dataList.length);
+    executeHandler(dataList);
+    setCapturedImageList(dataList);
+    // try {
+    //   const video = document.createElement("video");
+    //   video.src = recordedBlobUrl;
+    //   video.currentTime = Number.MAX_SAFE_INTEGER;
+    //   video.autoplay = true;
+    //   video.muted = true;
+    //   video.playsInline = true;
+    //   video.onloadeddata = async () => {
+    //     const duration = video.duration * 1000;
+    //     console.log("duration", duration);
+    //     const canvas = document.createElement("canvas");
+    //     canvas.width = video.videoWidth;
+    //     canvas.height = video.videoHeight;
+    //     const ctx = canvas.getContext("2d");
+    //     if (ctx === null) return;
+    //     let currentTime = 0;
+    //     let qrCodePosition: QRCodePosition | undefined = undefined;
+    //     for (;;) {
+    //       console.log(currentTime);
+    //       if (currentTime >= duration) break;
+    //       // video to image
+    //       currentTime += startMetaData.oneCQRShowingTime / 2;
+    //       video.currentTime = currentTime / 1000;
+    //       await video.play();
+    //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    //       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    //       // detect QR code
+    //       const detected = detectQRCode(image);
+    //       if (detected) {
+    //         qrCodePosition = detected;
+    //         continue;
+    //       }
+
+    //       if (!qrCodePosition) throw new Error("cannot detect QR code");
+
+    //       // crop image
+    //       const cropped = ctx.getImageData(
+    //         qrCodePosition.topLeft.x,
+    //         qrCodePosition.topLeft.y,
+    //         qrCodePosition.width,
+    //         qrCodePosition.height
+    //       );
+    //       ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //       ctx.putImageData(cropped, 0, 0);
+    //       const croppedStr = canvas.toDataURL("image/png");
+    //       capturedImageList.push({ data: cropped, str: croppedStr });
+    //     }
+    //     console.log(capturedImageList.length);
+    //     return video.pause();
+    //   };
+
+    //   video.load();
+    // } catch (e) {
+    //   console.log(e);
+    // }
+  };
+
+  useEffect(() => {
+    if (!recordedBlobUrl) return;
+    execProcess();
+  }, [recordedBlobUrl]);
+
   return (
     <div>
       <h1>From CQR Page</h1>
@@ -614,11 +610,11 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
           deviceId: selectedCameraInfo.deviceId,
           width: {
             ideal: selectedCameraInfo.width,
-            max: 1980,
+            max: 3840,
           },
           height: {
             ideal: selectedCameraInfo.height,
-            max: 1080,
+            max: 2160,
           },
         }}
         ref={webcamRef}
@@ -674,7 +670,7 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
         ))}
       </div>
       <div>
-        <button className="primary" onClick={executeHandler}>
+        <button className="primary" onClick={undefined}>
           Try it
         </button>
       </div>
