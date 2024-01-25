@@ -15,13 +15,12 @@ import {
 } from "../../constants";
 
 import "./style.css";
-import FromCQr from "../fromCQr";
 import { StartQRData } from "../../types/StartQRData";
 
 const ToCQrPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [cQrContainerList, setCQrContainerList] = useState<JSX.Element[]>([]);
-  const [showingCQrContainerIndex, setShowingCQrContainerIndex] = useState(0);
+  const [showingCQrContainerIndex, setShowingCQrContainerIndex] = useState(-1);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [binary, setBinary] = useState<Bit[]>([]);
   const [startQRStringData, setStartQRStringData] = useState<string>("");
@@ -157,27 +156,51 @@ const ToCQrPage = () => {
         </button>
         <div
           style={{
-            padding: "100px",
-            margin: "15px",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
             backgroundColor: "white",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
+            zIndex: 100,
+            display: showingCQrContainerIndex === -1 ? "none" : "block",
           }}
         >
-          {startQRStringData !== "" ? (
-            showingCQrContainerIndex === 0 ? (
-              <QRCodeSVG
-                value={startQRStringData}
-                size={
-                  (CQR_CELL_STYLE.borderWidth * 2 + CQR_CELL_STYLE.width) *
-                  (CQR_ROW_NUM + 2 * 2)
-                }
-              />
-            ) : (
-              cQrContainerList[showingCQrContainerIndex - 1]
-            )
-          ) : null}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
+              padding: "15px",
+            }}
+          >
+            <div
+              style={{
+                padding: "100px",
+                margin: "15px",
+                backgroundColor: "white",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              {startQRStringData !== "" ? (
+                showingCQrContainerIndex === 0 ? (
+                  <QRCodeSVG
+                    value={startQRStringData}
+                    size={
+                      (CQR_CELL_STYLE.borderWidth * 2 + CQR_CELL_STYLE.width) *
+                      (CQR_ROW_NUM + 2 * 2)
+                    }
+                  />
+                ) : (
+                  cQrContainerList[showingCQrContainerIndex - 1]
+                )
+              ) : null}
+            </div>
+          </div>
         </div>
         {/* <div
           style={{
@@ -213,7 +236,6 @@ const ToCQrPage = () => {
       </div>
       <br />
       <br />
-      <FromCQr srcData={binary}></FromCQr>
     </>
   );
 };
