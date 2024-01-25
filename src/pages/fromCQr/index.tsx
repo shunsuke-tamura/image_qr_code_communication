@@ -561,11 +561,11 @@ const FromCQrPage = ({ srcData }: { srcData?: Bit[] }) => {
       );
     });
     console.log(convertedImageBinary);
-    srcData!.map((bit, idx) => {
-      if (bit !== convertedImageBinary[idx]) {
-        console.log(idx, bit, convertedImageBinary[idx]);
-      }
-    });
+    // srcData!.map((bit, idx) => {
+    //   if (bit !== convertedImageBinary[idx]) {
+    //     console.log(idx, bit, convertedImageBinary[idx]);
+    //   }
+    // });
     const uint8Array = bitArrayToUint8Array(convertedImageBinary);
     const blob = new Blob([uint8Array], { type: "image/png" });
     const convertedImageStr = URL.createObjectURL(blob);
